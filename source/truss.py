@@ -8,7 +8,6 @@ from source.node import Node
 
 @dataclass
 class TrussElement:
-
     """
     3D Truss element with two nodes i and j, both of type Node.
     Axial direction is the local x-axis.
@@ -16,9 +15,7 @@ class TrussElement:
 
     Loads:
     - fx: Body load in the x-direction.
-
-
-
+    - F: Nodal load at the nodes, node i, node j.
     """
 
     i: Node  # Node i
@@ -29,7 +26,7 @@ class TrussElement:
 
     _length: float = None  # Length of the truss element, can be calculated
 
-    ID: int = field(init=False, default=1)  # class variable to keep track of the ID of the truss element
+    ID: int = field(init=False, default=0)  # class variable to keep track of the ID of the truss element
     ND: int = field(init=False, default=3)  # Number of degrees of freedom per node, default is 3 for 3D nodes
 
     def __post_init__(self):
@@ -52,14 +49,14 @@ class TrussElement:
         return self._length
 
     @property
-    def direction_vector(self):
+    def direction_vector(self) -> np.array:
         """The direction vector points from node i to node j."""
-        return (self.j.coords - self.i.coords) / self.length
+        return self.j.coords - self.i.coords
 
     def _N1(self, x) -> float:
         """The value of the shape function for node i, evaluated at x."""
         assert 0 <= x <= self.length, "x must be within the length of the truss element"
-        return 1 - (x/self.length)
+        return 1 - (x / self.length)
 
     def _N2(self, x) -> float:
         """The value of the shape function for node j, evaluated at x."""
@@ -155,13 +152,13 @@ class TrussElement:
 
         :return: Transformation matrix for the truss element.
         """
-        # unit vector: the normed direction vector
         unit_vector = self.direction_vector / self.length
 
         # transformation matrix as in (4.20) in the book
         _T = np.zeros((2, 2 * self.ND))
         _T[0, 0:self.ND] = unit_vector
         _T[1, self.ND:2 * self.ND] = unit_vector
+
         return _T
 
 
@@ -171,7 +168,8 @@ class TrussModel:
     A model for a truss structure, containing multiple truss elements.
     """
     nodes_: Tuple[Node, ...] = None  # Nodes in the truss model
-    elements_: Tuple[Tuple[int, int, float, float, float], ...] = None  # A nested tuple. # Elements in the truss model, each defined by (node_i_id, node_j_id, A, E, ro)
+    elements_: Tuple[Tuple[
+        int, int, float, float, float], ...] = None  # A nested tuple. # Elements in the truss model, each defined by (node_i_id, node_j_id, A, E, ro)
     supports_: Tuple[Tuple[int, str], ...] = None  # Supports. Node ID, direction ('x', 'y', 'z')
     ND: int = None
 
@@ -189,12 +187,13 @@ class TrussModel:
         # Convert nodes and elements to dictionaries for easy access
         # This allows for quick lookups by node ID and element ID
         self.nodes = {node.ID: node for node in self.nodes_}  # Convert nodes to a dictionary for easy access
-        self.elements = tuple(TrussElement(i=self.nodes[x[0]], j=self.nodes[x[1]], A=x[2], E=x[3], ro=x[4]) for x in self.elements_)
+        self.elements = tuple(
+            TrussElement(i=self.nodes[x[0]], j=self.nodes[x[1]], A=x[2], E=x[3], ro=x[4]) for x in self.elements_)
         self.elements = {x.ID: x for x in self.elements}  # Convert elements to a dictionary for easy access
         self.supports = self.supports_ if self.supports_ is not None else tuple()  # Supports, a tuple of (node_id, direction)
 
-        self.ND = self.elements[1].ND  # Number of DOF per node, taken from the first element
-        print('ND', self.ND)
+        # not checkd if if all elements have the same number of DOF per node, but it is assumed that they do.
+        self.ND = self.elements[0].ND  # Number of DOF per node, taken from the first element
 
     @property
     def K(self) -> np.array:
@@ -206,17 +205,16 @@ class TrussModel:
         n_dofs = self.ND * len(self.nodes)  # 3 degrees of freedom per node (x, y, z)
         K_global = np.zeros((n_dofs, n_dofs))  # quadratic, symmetric
         # Assemble the global stiffness matrix
-        for element in self.elements.values():
-            K_element = element.Ke  # Local stiffness matrix for the element
+        for _id, element in self.elements.items():
+            K_element = element.Ke  # Global stiffness matrix for the element
 
             # the _global_ DOF indices for this element
             if self.ND == 2:
-                dof_indices = [self.ND * (element.i.ID-1), self.ND * (element.i.ID-1) + 1,
-                                 self.ND * (element.j.ID-1), self.ND * (element.j.ID-1) + 1]
+                dof_indices = [self.ND * element.i.ID, self.ND * element.i.ID + 1,
+                               self.ND * element.j.ID, self.ND * element.j.ID + 1]
             else:
-                dof_indices = [self.ND * (element.i.ID-1), self.ND * (element.i.ID-1) + 1, self.ND * (element.i.ID-1) + 2,
-                               self.ND * (element.j.ID-1), self.ND * (element.j.ID-1) + 2, self.ND * (element.j.ID-1) + 3]
-            print(f"Element {element.ID}: nodes = {(element.i.ID, element.j.ID)}, dof_indices = {dof_indices}")
+                dof_indices = [self.ND * element.i.ID, self.ND * element.i.ID + 1, self.ND * element.i.ID + 2,
+                               self.ND * element.j.ID, self.ND * element.j.ID + 1, self.ND * element.j.ID + 2]
 
             for i in range(2 * self.ND):
                 for j in range(2 * self.ND):
@@ -236,29 +234,45 @@ class TrussModel:
         """
         K = self.K
 
-        # dofs will be removed from the stiffness matrix and force vector
-        # this is done by first reverse sorting the supports by node_id and direction to avoid problems with indices changing after deletion
+        # # dofs will be removed from the stiffness matrix and force vector
+        # # this is done by first reverse sorting the supports by node_id and direction to avoid problems with indices changing after deletion
         _supports = sorted(self.supports, key=lambda x: (x[0], x[1]), reverse=True)
 
         for node_id, direction in _supports:
-            dof_index = self.ND * (node_id - 1) + {'x': 0, 'y': 1, 'z': 2}[direction]
+            dof_index = self.ND * node_id + {'x': 0, 'y': 1, 'z': 2}[direction]
 
-            print(f"Applying boundary condition at node {node_id}, direction {direction}, dof_index {dof_index}")
+            # # removing the dof_indexth row and column from the stiffness matrix
+            # K = np.delete(K, dof_index, axis=0)  # Remove the row
+            # K = np.delete(K, dof_index, axis=1)  # Remove the column
+            # F = np.delete(F, dof_index)  # Remove the corresponding force
 
-            # removing the dof_indexth row and column from the stiffness matrix
-            K = np.delete(K, dof_index, axis=0)  # Remove the row
-            K = np.delete(K, dof_index, axis=1)  # Remove the column
-            F = np.delete(F, dof_index)  # Remove the corresponding force
-
-            # # Set the row and column of the stiffness matrix to zero
-            # K[dof_index, :] = 0
-            # K[:, dof_index] = 0
-            # # Set the diagonal element to a large value (to avoid singularity)
-            # K[dof_index, dof_index] = 1e12
-            # # Set the corresponding force to zero
-            # F[dof_index] = 0
+            # Alternative method to apply boundary conditions using the penalty method
+            # Set the row and column of the stiffness matrix to zero
+            K[dof_index, :] = 0
+            K[:, dof_index] = 0
+            # Set the diagonal element to a large value (to avoid singularity)
+            # note: the value 1e20 is arbitrary, it should be large enough to avoid numerical issues - check all other
+            # values in the global stiffness matrix
+            K[dof_index, dof_index] = 1e20
+            # Set the corresponding force to zero
+            F[dof_index] = 0
 
         return K, F
+
+    def member_forces(self, u: np.array) -> np.array:
+        """
+        Calculate the member forces in the truss elements based on the displacements.
+
+        :param u: Global displacement vector.
+        :return: Member forces in the truss elements.
+        """
+        forces = np.zeros(len(self.elements))
+
+        # Iterate over each element and calculate the member force
+        for i, element in self.elements.values():
+            Du = u[self.ND * element.i.ID:self.ND * element.j.ID + self.ND]  # displacements of the nodes
+
+
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -273,21 +287,25 @@ if __name__ == '__main__':  # pragma: no cover
     model = TrussModel(
         nodes_=(n1, n2, n3),
         elements_=((n1.ID, n2.ID, A, E, ro),
-                  (n1.ID, n3.ID, A, E, ro),
-                  (n2.ID, n3.ID, A, E, ro),),
-        supports_=((1, 'x'), (1, 'y'), (3, 'y'),
+                   (n1.ID, n3.ID, A, E, ro),
+                   (n2.ID, n3.ID, A, E, ro),),
+        supports_=((0, 'x'), (0, 'y'), (2, 'x'),
                    ),
     )
 
     F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero
     F[3] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
 
+    np.set_printoptions(precision=3, suppress=True, linewidth=120)
+    print("Global stiffness matrix K before applying the BCs:\n", model.K)
+
     K, F = model.apply_boundary_conditions(F)  # Apply boundary conditions
 
     # set the numpy printout options for better readability
-    np.set_printoptions(precision=3, suppress=True, linewidth=120)
-    print("Global stiffness matrix K:\n", K)
+    print("Global stiffness matrix K after adding the BCs:\n", K)
+    print('Global force vector F:\n', F)
 
     # Solve the system of equations K * u = F for the displacements u
     u = np.linalg.solve(K, F)
+    np.set_printoptions(precision=3, suppress=False, linewidth=120)
     print("Displacements:", u)

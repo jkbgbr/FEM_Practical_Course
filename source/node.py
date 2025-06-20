@@ -10,7 +10,7 @@ class Node:
     y: float
     z: float = None  # Default z-coordinate for 2D nodes
 
-    ID: int = field(init=False, default=1)  # class variable to keep track of the ID of the node
+    ID: int = field(init=False, default=0)  # class variable to keep track of the ID of the node
 
     def __post_init__(self):
         self.ID = Node.ID
