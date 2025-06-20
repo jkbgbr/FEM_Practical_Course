@@ -210,3 +210,16 @@ Das Ergebnis ist:
 ```
 [1. 0. 0.]
 ```
+
+# Reaction forces at the supports
+
+Um die Auflagerkräfte zu berechnen, verwenden Sie die grundlegende Gleichung des Finite-Elemente-Verfahrens für das gesamte System: R = K * u - F.
+
+Dabei gilt:
+
+
+R ist der Vektor der Auflagerkräfte.
+K ist die vollständige globale Steifigkeitsmatrix (vor Anwendung der Randbedingungen).
+u ist der vollständige globale Verschiebungsvektor (einschließlich der Nullen an den Auflagern).
+F ist der ursprüngliche Vektor der externen Kräfte.
+Sie können eine Methode zu Ihrer TrussModel-Klasse hinzufügen, um diese Berechnung durchzuführen.

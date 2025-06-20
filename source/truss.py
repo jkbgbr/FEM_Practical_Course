@@ -311,6 +311,36 @@ class TrussModel:
 
         return forces
 
+    def reaction_forces(self, u_reduced: np.array, f_external: np.array) -> np.array:
+        """
+        Calculates the reaction forces at the supports.
+        The reaction forces are calculated using the formula R = K * u - F.
+
+        :param u_reduced: The reduced displacement vector (solution of the system after applying BCs).
+        :param f_external: The original global external force vector (before applying BCs).
+        :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
+        """
+        # 1. Reconstruct the full displacement vector from the reduced one.
+        n_total_dofs = self.ND * len(self.nodes)
+        u_full = np.zeros(n_total_dofs)
+
+        # Get the indices of the supported DOFs
+        supported_dofs = {self.ND * node_id + {'x': 0, 'y': 1, 'z': 2}[direction]
+                          for node_id, direction in self.supports}
+
+        # Get the indices of the free (unsupported) DOFs
+        all_dofs = set(range(n_total_dofs))
+        free_dofs = sorted(list(all_dofs - supported_dofs))
+
+        # Populate the full displacement vector with the calculated displacements
+        u_full[free_dofs] = u_reduced
+
+        # 2. Calculate reaction forces: R = K_global * u_full - F_external
+        # self.K is the full global stiffness matrix before applying BCs
+        reactions = self.K @ u_full - f_external
+
+        return reactions
+
 
 if __name__ == '__main__':  # pragma: no cover
 
@@ -351,3 +381,8 @@ if __name__ == '__main__':  # pragma: no cover
     print("Global displacements:", _U)
     # Calculate the member force using the local stiffness matrix
     print('Member forces:', model.member_forces(_U))
+    # Calculate the reaction forces at the supports
+
+    _F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero
+    _F[model.ND + 1] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
+    print('Reaction forces at the supports:', model.reaction_forces(_U, _F))
