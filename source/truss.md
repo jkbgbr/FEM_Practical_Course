@@ -161,7 +161,7 @@ Um die Richtungskosinus des Fachwerkelements zu berechnen, kannst du die Koordin
    $$
    \text{Richtungsvektor} = \vec{d} = \vec{j} - \vec{i}
    $$
-   Dabei sind \(\vec{i}\) und \(\vec{j}\) die Koordinaten der Knoten.
+   Dabei sind $\vec{i}$ und $\vec{j}$ die Koordinaten der Knoten.
 
 2. Berechne die Länge des Richtungsvektors:
    $$
@@ -219,7 +219,9 @@ Dabei gilt:
 
 
 R ist der Vektor der Auflagerkräfte.
+
 K ist die vollständige globale Steifigkeitsmatrix (vor Anwendung der Randbedingungen).
+
 u ist der vollständige globale Verschiebungsvektor (einschließlich der Nullen an den Auflagern).
+
 F ist der ursprüngliche Vektor der externen Kräfte.
-Sie können eine Methode zu Ihrer TrussModel-Klasse hinzufügen, um diese Berechnung durchzuführen.
