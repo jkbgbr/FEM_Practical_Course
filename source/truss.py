@@ -202,9 +202,9 @@ class TrussModel:
         self.ND = self.elements[0].ND  # Number of DOF per node, taken from the first element
 
         # set the DOF indices for each element
-        self._set_element_dif_indices()
+        self._set_element_dof_indices()
 
-    def _set_element_dif_indices(self):
+    def _set_element_dof_indices(self):
         """
         This is for convenience only. It will set the global dof indices for each element so it doesn't
         have to be done each time.
@@ -318,20 +318,21 @@ if __name__ == '__main__':  # pragma: no cover
     E = 7e10  # Young's modulus
     ro = 1.0  # Density
 
-    n1 = Node(0, 0)
-    n2 = Node(1, 0)
-    n3 = Node(0, 1)
+    n1 = Node(0, 0, 0)
+    n2 = Node(1, 0, 0)
+    n3 = Node(0, 1, 0)
     model = TrussModel(
         nodes_=(n1, n2, n3),
         elements_=((n1.ID, n2.ID, A, E, ro),
                    (n1.ID, n3.ID, A, E, ro),
                    (n2.ID, n3.ID, A, E, ro),),
         supports_=((0, 'x'), (0, 'y'), (2, 'x'),
+                   (0, 'z'), (1, 'z'), (2, 'z')
                    ),
     )
 
     _F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero
-    _F[3] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
+    _F[model.ND + 1] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
 
     np.set_printoptions(precision=3, suppress=True, linewidth=120)
     print("Global stiffness matrix K before applying the BCs:\n", model.K)

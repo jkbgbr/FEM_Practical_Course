@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from source.node import Node
-from source.truss import TrussElement
+from source.truss import TrussElement, TrussModel
 
 
 class TestTruss(unittest.TestCase):
@@ -43,6 +43,93 @@ class TestTruss(unittest.TestCase):
     def test_transformation_matrix(self):
         T = self.e1.transformation_matrix
         np.testing.assert_allclose(T @ T.T, np.eye(2))  # Check orthogonality
+
+
+class SingleElementTest(unittest.TestCase):
+
+    """
+    A single horizontal truss element, left end fixed in x and y, right end fixed in y and loaded in x
+    """
+
+    def setUp(self):
+
+        A = 0.1  # Cross-sectional area
+        E = 7e10  # Young's modulus
+        ro = 1.0  # Density
+
+        n1 = Node(0, 0,)
+        n2 = Node(1, 0,)
+        TrussElement.ID = 0  # Reset element ID for consistent testing
+        self.model = TrussModel(
+            nodes_=(n1, n2),
+            elements_=((n1.ID, n2.ID, A, E, ro),),
+            supports_=((0, 'x'), (0, 'y'),  # unloaded end: x, y displacement fixed
+                       (1, 'y')),  # loaded end: y displacement fixed
+        )
+
+        self.load = np.zeros(self.model.ND * len(self.model.nodes))  # No external forces
+        self.load[self.model.ND] = -1000  # Apply a load of -1000 N at node 1 in the x-direction
+
+    def test_single_element(self):
+        self.assertEqual(len(self.model.nodes), 2)
+        self.assertEqual(len(self.model.elements), 1)
+        self.assertEqual(self.model.elements[0].length, 1.0)
+        self.assertEqual(self.model.elements[0].A, 0.1)
+        self.assertEqual(self.model.elements[0].E, 7e10)
+        self.assertEqual(self.model.elements[0].ro, 1.0)
+
+    def test_member_forces(self):
+        _K, _F = self.model.apply_boundary_conditions(self.load)  # Apply boundary conditions
+
+        _U = np.linalg.solve(_K, _F)
+        member_forces = self.model.member_forces(_U)
+        self.assertTrue(np.isclose(member_forces[0][0], -1000))
+
+
+class MultiElementTest(unittest.TestCase):
+
+    """
+    A truss like a pyramide with a single vertical load at the top node.
+    """
+
+    def setUp(self):
+        A = 0.1  # Cross-sectional area
+        E = 7e10  # Young's modulus
+        ro = 1.0  # Density
+
+        n1 = Node(1, 1, 0)
+        n2 = Node(-1, 1, 0)
+        n3 = Node(-1, -1, 0)
+        n4 = Node(1, -1, 0)
+        n5 = Node(0, 0, 1)
+        TrussElement.ID = 0  # Reset element ID for consistent testing
+        self.model = TrussModel(
+            nodes_=(n1, n2, n3, n4, n5),
+            elements_=(
+                (n1.ID, n5.ID, A, E, ro),
+                (n2.ID, n5.ID, A, E, ro),
+                (n3.ID, n5.ID, A, E, ro),
+                (n4.ID, n5.ID, A, E, ro),
+                       ),
+            supports_=(
+                (0, 'x'), (0, 'y'), (0, 'z'),
+                (1, 'x'), (1, 'y'), (1, 'z'),  # Node 2 fixed in x and y
+                (2, 'x'), (2, 'y'), (2, 'z'),  # Node 3 fixed in x and y
+                (3, 'x'), (3, 'y'), (3, 'z'),  # Node 4 fixed in x and y
+            )
+        )
+
+        self.load = np.zeros(self.model.ND * len(self.model.nodes))  # No external forces
+        self.load[14] = -1000  # Apply a load of -1000 N at node 1 in the x-direction
+
+    def test_member_forces(self):
+        _K, _F = self.model.apply_boundary_conditions(self.load)  # Apply boundary conditions
+
+        _U = np.linalg.solve(_K, _F)
+        member_forces = self.model.member_forces(_U)
+
+        # all member forces are the same
+        self.assertTrue(len(set(x[0] for x in member_forces)) == 1)
 
 
 if __name__ == '__main__':
