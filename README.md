@@ -6,7 +6,7 @@ This project aims to implement worked examples from the book "The Finite Element
 
 The project is organized into sections based on different types of structural elements:
 
--   **Trusses**: Implementation of truss element analysis. (WIP)
+-   **Trusses**: Implementation of truss elements. (WIP)
 -   **Beams**: Implementation of beam element analysis. (Planned)
 -   **Frames**: Implementation of frame element analysis. (Planned)
 -   **Plates/Shells**: Implementation of plate and shell element analysis. (Planned)
@@ -26,3 +26,4 @@ The truss implementation includes the following features:
 -   Solution for nodal displacements.
 -   Calculation of member forces (tension/compression).
 -   Calculation of reaction forces at supports.
+-   Tests with single- and multi-element examples.
