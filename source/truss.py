@@ -25,6 +25,7 @@ class TrussElement:
     ro: float = 1.0  # Density of the material
 
     _length: float = None  # Length of the truss element, can be calculated
+    _dof_indices: tuple = None  # DOF indices for the element in the model, to be set later by the model
 
     ID: int = field(init=False, default=0)  # class variable to keep track of the ID of the truss element
     ND: int = field(init=False, default=3)  # Number of degrees of freedom per node, default is 3 for 3D nodes
@@ -47,6 +48,10 @@ class TrussElement:
         if self._length is None:
             self._length = self.i.distance(self.j)
         return self._length
+
+    @property
+    def dof_indices(self):
+        return self._dof_indices
 
     @property
     def direction_vector(self) -> np.array:
@@ -121,7 +126,8 @@ class TrussElement:
         """
         return np.array((fx * self.length / 2, fx * self.length / 2))
 
-    def _nodal_load(self, F: np.array) -> np.array:
+    @staticmethod
+    def _nodal_load(F: np.array) -> np.array:
         """
         Nodal load for the truss element.
         :param F: an array of loads at the nodes, node i, node j.
@@ -187,13 +193,33 @@ class TrussModel:
         # Convert nodes and elements to dictionaries for easy access
         # This allows for quick lookups by node ID and element ID
         self.nodes = {node.ID: node for node in self.nodes_}  # Convert nodes to a dictionary for easy access
-        self.elements = tuple(
+        elements_ = tuple(
             TrussElement(i=self.nodes[x[0]], j=self.nodes[x[1]], A=x[2], E=x[3], ro=x[4]) for x in self.elements_)
-        self.elements = {x.ID: x for x in self.elements}  # Convert elements to a dictionary for easy access
+        self.elements = {x.ID: x for x in elements_}  # Convert elements to a dictionary for easy access
         self.supports = self.supports_ if self.supports_ is not None else tuple()  # Supports, a tuple of (node_id, direction)
 
-        # not checkd if if all elements have the same number of DOF per node, but it is assumed that they do.
+        # not checkd if all elements have the same number of DOF per node, but it is assumed that they do.
         self.ND = self.elements[0].ND  # Number of DOF per node, taken from the first element
+
+        # set the DOF indices for each element
+        self._set_element_dif_indices()
+
+    def _set_element_dif_indices(self):
+        """
+        This is for convenience only. It will set the global dof indices for each element so it doesn't
+        have to be done each time.
+        Set the element DOF indices for each element.
+        This is used to assemble the global stiffness matrix.
+        """
+        for element in self.elements.values():
+            # the _global_ DOF indices for this element
+            if self.ND == 2:
+                element._dof_indices = tuple([self.ND * element.i.ID, self.ND * element.i.ID + 1,
+                                             self.ND * element.j.ID, self.ND * element.j.ID + 1])
+            else:
+                element._dof_indices = tuple(
+                    [self.ND * element.i.ID, self.ND * element.i.ID + 1, self.ND * element.i.ID + 2,
+                     self.ND * element.j.ID, self.ND * element.j.ID + 1, self.ND * element.j.ID + 2])
 
     @property
     def K(self) -> np.array:
@@ -208,14 +234,7 @@ class TrussModel:
         for _id, element in self.elements.items():
             K_element = element.Ke  # Global stiffness matrix for the element
 
-            # the _global_ DOF indices for this element
-            if self.ND == 2:
-                dof_indices = [self.ND * element.i.ID, self.ND * element.i.ID + 1,
-                               self.ND * element.j.ID, self.ND * element.j.ID + 1]
-            else:
-                dof_indices = [self.ND * element.i.ID, self.ND * element.i.ID + 1, self.ND * element.i.ID + 2,
-                               self.ND * element.j.ID, self.ND * element.j.ID + 1, self.ND * element.j.ID + 2]
-
+            dof_indices = element.dof_indices  # Use the pre-set DOF indices for the element
             for i in range(2 * self.ND):
                 for j in range(2 * self.ND):
                     # add the i,j element of the local stiffness matrix to the element of the global stiffness matrix defined by the global dof indices.
@@ -228,7 +247,6 @@ class TrussModel:
         Apply boundary conditions to the global stiffness matrix and force vector.
         This method modifies the global stiffness matrix and force vector in place.
 
-        :param K: Global stiffness matrix.
         :param F: Global force vector.
         :return: Modified global stiffness matrix and force vector.
         """
@@ -266,13 +284,32 @@ class TrussModel:
         :param u: Global displacement vector.
         :return: Member forces in the truss elements.
         """
-        forces = np.zeros(len(self.elements))
+        forces = []
 
         # Iterate over each element and calculate the member force
-        for i, element in self.elements.values():
-            Du = u[self.ND * element.i.ID:self.ND * element.j.ID + self.ND]  # displacements of the nodes
+        for i, element in self.elements.items():
+            Du = u[list(element.dof_indices)]  # global displacements of the nodes in the element
+            _T = element.transformation_matrix
+            # Transform the global displacements to local displacements
+            du = _T @ Du
+            # Calculate the member force using the local stiffness matrix.
+            # This returns the nodal forces in the local coordinate system, one value for each node.
+            # The nodal forces are the same value but opposite sign.
+            # by convention, compression is negative.
+            nodal_forces = element.ke @ du  # Global stiffness matrix times the displacements
 
+            # If the j node is positive, the member is in tension.
+            res = [float(nodal_forces[1]), '']
+            if nodal_forces[1] < 0:
+                res[1] = 'compression'
+            elif nodal_forces[1] > 0:
+                res[1] = 'tension'
+            else:
+                res[1] = 'no force'
 
+            forces.append(res)  # Store the force at node i (the second node in the element)
+
+        return forces
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -293,19 +330,23 @@ if __name__ == '__main__':  # pragma: no cover
                    ),
     )
 
-    F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero
-    F[3] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
+    _F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero
+    _F[3] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
 
     np.set_printoptions(precision=3, suppress=True, linewidth=120)
     print("Global stiffness matrix K before applying the BCs:\n", model.K)
 
-    K, F = model.apply_boundary_conditions(F)  # Apply boundary conditions
+    _K, _F = model.apply_boundary_conditions(_F)  # Apply boundary conditions
 
     # set the numpy printout options for better readability
-    print("Global stiffness matrix K after adding the BCs:\n", K)
-    print('Global force vector F:\n', F)
+    print("Global stiffness matrix K after adding the BCs:\n", _K)
+    print('Global force vector F:\n', _F)
 
     # Solve the system of equations K * u = F for the displacements u
-    u = np.linalg.solve(K, F)
+    _U = np.linalg.solve(_K, _F)
     np.set_printoptions(precision=3, suppress=False, linewidth=120)
-    print("Displacements:", u)
+    print()
+    print('Results:')
+    print("Global displacements:", _U)
+    # Calculate the member force using the local stiffness matrix
+    print('Member forces:', model.member_forces(_U))
