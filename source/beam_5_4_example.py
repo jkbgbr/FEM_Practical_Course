@@ -32,3 +32,10 @@ u[2:] = displacements  # set the displacements at node 2
 
 R = ke @ u  # Reaction forces at the supports
 print("Reaction forces at the supports (V[N], M[Nm]):", R[:2])
+
+# Deflections at a position along the x axis
+xs = np.linspace(-beam.a, beam.a, 15)  # Local coordinates along the beam element
+for x in xs:
+    y = beam.base_functions(x) @ u  # Calculate deflections using the B matrix
+
+beam.plot_deflections(xs, u)

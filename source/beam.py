@@ -10,6 +10,8 @@ in (5.20) correctly: N3" = -3/2 * ksi
 from dataclasses import dataclass
 
 import numpy as np
+import matplotlib.pyplot as plt
+
 from source.node import Node
 
 
@@ -37,9 +39,13 @@ class BeamElement:
             raise ValueError("Cross-sectional area must be positive.")
 
     @property
+    def length(self):
+        return self.n1.distance(self.n2)
+
+    @property
     def a(self):
         """Half Length of the beam element."""
-        return self.n1.distance(self.n2) / 2
+        return self.length / 2
 
     def base_functions(self, ksi):
         """Base functions for the beam element."""
@@ -108,3 +114,37 @@ class BeamElement:
         me *= self.ro * self.A * a / 105
 
         return me
+
+    def plot_deflections(self, xs: np.ndarray, u: np.ndarray):
+        """
+        Plots the deflection alon the x axis at the positions given in xs.
+
+        :param xs: Local coordinates along the beam element.
+        :param u: Displacements vector for the beam element.
+        """
+
+        #c calculate the y values for the xs positions
+        ys = []
+        for x in xs:
+            # the ksi value for this x position
+            ksi = (x / self.a)
+            # the deflection at this point
+            ys.append(self.base_functions(ksi) @ u)
+
+        # plot the elasic line
+        plt.plot(xs, ys, label='Deflection')
+
+        # Plot the nodes
+        plt.plot(xs, ys, 'ro', label='Nodes')
+        # add the deflection to all nodes, vertically aligned over the node
+        for x, y in zip(xs, ys):
+            plt.text(x, y, '{:.2g}'.format(y), rotation=90)
+
+        plt.xlabel('x (m)')
+        plt.ylabel('Deflection (m)')
+        plt.title('Beam Element Deflection')
+        plt.axhline(0, color='black', lw=0.5, ls='--')
+        plt.axvline(0, color='black', lw=0.5, ls='--')
+        plt.legend()
+        plt.grid()
+        plt.show()
