@@ -259,12 +259,7 @@ class TrussModel:
         for node_id, direction in _supports:
             dof_index = self.ND * node_id + {'x': 0, 'y': 1, 'z': 2}[direction]
 
-            # # removing the dof_indexth row and column from the stiffness matrix
-            # K = np.delete(K, dof_index, axis=0)  # Remove the row
-            # K = np.delete(K, dof_index, axis=1)  # Remove the column
-            # F = np.delete(F, dof_index)  # Remove the corresponding force
-
-            # Alternative method to apply boundary conditions using the penalty method
+            # Apply boundary conditions using the penalty method
             # Set the row and column of the stiffness matrix to zero
             K[dof_index, :] = 0
             K[:, dof_index] = 0
@@ -311,7 +306,7 @@ class TrussModel:
 
         return forces
 
-    def reaction_forces(self, u_reduced: np.array, f_external: np.array) -> np.array:
+    def reaction_forces(self, u: np.array, f_external: np.array) -> np.array:
         """
         Calculates the reaction forces at the supports.
         The reaction forces are calculated using the formula R = K * u - F.
@@ -320,23 +315,7 @@ class TrussModel:
         :param f_external: The original global external force vector (before applying BCs).
         :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
         """
-        # 1. Reconstruct the full displacement vector from the reduced one.
-        n_total_dofs = self.ND * len(self.nodes)
-        u_full = np.zeros(n_total_dofs)
 
-        # Get the indices of the supported DOFs
-        supported_dofs = {self.ND * node_id + {'x': 0, 'y': 1, 'z': 2}[direction]
-                          for node_id, direction in self.supports}
-
-        # Get the indices of the free (unsupported) DOFs
-        all_dofs = set(range(n_total_dofs))
-        free_dofs = sorted(list(all_dofs - supported_dofs))
-
-        # Populate the full displacement vector with the calculated displacements
-        u_full[free_dofs] = u_reduced
-
-        # 2. Calculate reaction forces: R = K_global * u_full - F_external
-        # self.K is the full global stiffness matrix before applying BCs
-        reactions = self.K @ u_full - f_external
+        reactions = self.K @ u - f_external
 
         return reactions

@@ -41,8 +41,6 @@ print('Results:')
 print("Global displacements:", _U)
 # Calculate the member force using the local stiffness matrix
 print('Member forces:', model.member_forces(_U))
-# Calculate the reaction forces at the supports
 
-_F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero
-_F[model.ND + 1] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
-print('Reaction forces at the supports:', model.reaction_forces(_U, _F))
+# Calculate the reaction forces
+print('Reaction forces:', model.reaction_forces(_U, _F))
