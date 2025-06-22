@@ -319,3 +319,41 @@ class TrussModel:
         reactions = self.K @ u - f_external
 
         return reactions
+
+    def plot_truss(self, u: np.array = None, disp_factor: float = None):
+        """
+        Plot the truss structure with optional displacements.
+
+        :param u: Global displacement vector. If provided, the truss will be plotted with displacements.
+        """
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        if disp_factor is None:
+            disp_factor = (max(x.length for x in self.elements.values()) / 10) / max(abs(x) for x in u)  # Default factor based on the longest element
+
+        for element in self.elements.values():
+            x = [element.i.coords[0], element.j.coords[0]]
+            y = [element.i.coords[1], element.j.coords[1]]
+            z = [element.i.coords[2], element.j.coords[2]]
+            ax.plot(x, y, z, 'ko-')
+
+            if u is not None:
+                # Apply displacements to the nodes
+                x_ = np.array([u[element.dof_indices[0]], u[element.dof_indices[self.ND + 0]]])
+                y_ = np.array([u[element.dof_indices[1]], u[element.dof_indices[self.ND + 1]]])
+                z_ = np.array([u[element.dof_indices[2]], u[element.dof_indices[self.ND + 2]]])
+
+                x_ = x_ * disp_factor
+                y_ = y_ * disp_factor
+                z_ = z_ * disp_factor
+
+                x_ = x_[0] + element.i.coords[0], x_[1] + element.j.coords[0]
+                y_ = y_[0] + element.i.coords[1], y_[1] + element.j.coords[1]
+                z_ = z_[0] + element.i.coords[2], z_[1] + element.j.coords[2]
+                ax.plot(x_, y_, z_, 'ro-')
+
+        plt.show()

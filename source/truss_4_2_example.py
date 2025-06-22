@@ -44,3 +44,6 @@ print('Member forces:', model.member_forces(_U))
 
 # Calculate the reaction forces
 print('Reaction forces:', model.reaction_forces(_U, _F))
+
+# Plot the truss structure
+model.plot_truss(_U)
