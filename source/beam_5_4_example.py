@@ -30,8 +30,10 @@ print("Displacements at node 2:", displacements)
 u = np.zeros(4)  # Initialize displacements vector for both nodes
 u[2:] = displacements  # set the displacements at node 2
 
-R = ke @ u  # Reaction forces at the supports
-print("Reaction forces at the supports (V[N], M[Nm]):", R[:2])
+# Calculate the reaction forces
+# all nodes are considered, nodes without supports will have zero values
+R = ke @ u - F  # Reaction forces
+print("Reaction forces:", R)
 
 # Deflections at a position along the x axis
 xs = np.linspace(-beam.a, beam.a, 15)  # Local coordinates along the beam element
