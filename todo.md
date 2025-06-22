@@ -1,7 +1,6 @@
 # truss
 
-- fix the reaction force calculation
-- may be add a plot function for the TrussModel class
+- maybe add a plot function for the TrussModel class
 
 
 # beam
