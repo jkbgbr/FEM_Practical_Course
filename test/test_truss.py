@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from source.node import Node
-from source.truss import TrussElement, TrussModel
+from source.truss.truss import TrussElement, TrussModel
 
 
 class TestTruss(unittest.TestCase):

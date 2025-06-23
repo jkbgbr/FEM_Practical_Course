@@ -115,6 +115,80 @@ class BeamElement:
 
         return me
 
+    def _distributed_load(self, q: float) -> np.ndarray:
+        """
+        Calculates the load vector for a uniformly distributed load acting in the y direction on the beam element.
+
+        :param q: load intensity (force per unit length).
+        :return: Load vector (4x1).
+        """
+        length_ = self.length
+        
+        f_e = np.array([
+            q * length_ / 2,
+            q * length_ ** 2 / 12,
+            q * length_ / 2,
+            -q * length_ ** 2 / 12
+        ])
+        return f_e
+
+    def _nodal_load(self, F1: float, M1: float, F2: float, M2: float) -> np.ndarray:
+        """
+        Load vector for nodal forces and moments at the two nodes of the beam element.
+
+        :param F1: Force, in y direction, at the first node.
+        :param M1: Moment at the first node.
+        :param F2: Force, in y direction, at the second node.
+        :param M2: Moment at the second node.
+        :return: Load vector (4x1).
+        """
+        f_e = np.array([F1, M1, F2, M2])
+        return f_e
+
+    def _gravity_load(self, g: float) -> np.ndarray:
+        """
+        Calculates the load vector for a uniform gravitational load acting in the y direction on the beam element.
+
+        :param g: Gravitational acceleration (m/s^2).
+        :return: Load vector (4x1).
+        """
+        f_e = self._distributed_load(self.ro * self.A * g)
+        return f_e
+
+    def load_vector(self, q: float = None, F1: float = None, M1: float = None, F2: float = None, M2: float = None, g: float = None) -> np.ndarray:
+        """
+        Calculates the load vector for the beam element.
+
+        :param q: Uniformly distributed load (force per unit length) in the y direction.
+        :param F1: Force at the first node in the y direction.
+        :param M1: Moment at the first node.
+        :param F2: Force at the second node in the y direction.
+        :param M2: Moment at the second node.
+        :param g: Gravitational acceleration (m/s^2).
+        :return: Load vector (4x1).
+        """
+        # Initialize the load vector
+        f_e = np.zeros(4)
+
+        # If a uniformly distributed load is specified, add it to the load vector
+        if q is not None:
+            f_e += self._distributed_load(q)
+
+        # If any of the nodal loads are specified, add them to the load vector
+        nodal_load = []
+        for attr in ('F1', 'M1', 'F2', 'M2'):
+            if locals()[attr] is not None:
+                nodal_load.append(float(locals()[attr]))
+            else:
+                nodal_load.append(0.0)
+        f_e += self._nodal_load(*nodal_load)
+
+        # gravity load
+        if g is not None:
+            f_e += self._gravity_load(g)
+
+        return f_e
+
     def plot_deflections(self, xs: np.ndarray, u: np.ndarray):
         """
         Plots the deflection alon the x axis at the positions given in xs.

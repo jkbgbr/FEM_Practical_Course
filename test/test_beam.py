@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from source.node import Node
-from source.beam import BeamElement
+from source.beam.beam import BeamElement
 
 
 class TestBeam(unittest.TestCase):
