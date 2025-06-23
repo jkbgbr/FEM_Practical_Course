@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Tuple
+from typing import Tuple, ClassVar
 
 import numpy as np
 
@@ -27,7 +27,10 @@ class TrussElement:
     _length: float = None  # Length of the truss element, can be calculated
     _dof_indices: tuple = None  # DOF indices for the element in the model, to be set later by the model
 
-    ID: int = field(init=False, default=0)  # class variable to keep track of the ID of the truss element
+    # class variable to keep track of the ID of the truss element
+    # NOTE: This is a class variable, so it is shared across all instances of the class. If you have multiple
+    # instances of the TrussModel, this will cause problems as the numbering will not start at 0 for each model.
+    ID_counter: ClassVar[int] = 0  # class variable to keep track of the ID of the element
     ND: int = field(init=False, default=3)  # Number of degrees of freedom per node, default is 3 for 3D nodes
 
     def __post_init__(self):
@@ -36,8 +39,8 @@ class TrussElement:
             raise TypeError("i and j must be instances of Node")
         if self.i == self.j:
             raise ValueError("Nodes i and j must be different")
-        self.ID = TrussElement.ID
-        TrussElement.ID += 1  # Increment the class variable ID
+        self.ID = TrussElement.ID_counter
+        TrussElement.ID_counter += 1  # Increment the class variable ID
 
         # setting the number of degrees of freedom for the truss element
         TrussElement.ND = len(self.i.coords)
@@ -235,6 +238,8 @@ class TrussModel:
             K_element = element.Ke  # Global stiffness matrix for the element
 
             dof_indices = element.dof_indices  # Use the pre-set DOF indices for the element
+            print(_id, element)
+            print(dof_indices)
             for i in range(2 * self.ND):
                 for j in range(2 * self.ND):
                     # add the i,j element of the local stiffness matrix to the element of the global stiffness matrix defined by the global dof indices.

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 import numpy as np
 
@@ -10,11 +11,13 @@ class Node:
     y: float
     z: float = None  # Default z-coordinate for 2D nodes
 
-    ID: int = field(init=False, default=0)  # class variable to keep track of the ID of the node
+    # Node ID.
+    # NOTE: This is a class variable, so it is shared across all instances of the class.
+    ID_counter: ClassVar[int] = 0  # class variable to keep track of the ID of the node
 
     def __post_init__(self):
-        self.ID = Node.ID
-        Node.ID += 1  # Increment the class variable ID
+        self.ID = Node.ID_counter
+        Node.ID_counter += 1  # Increment the class variable ID
 
     def __eq__(self, other):
         """Check if two nodes are equal based on their id and location."""
