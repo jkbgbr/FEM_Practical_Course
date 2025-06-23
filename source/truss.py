@@ -238,8 +238,6 @@ class TrussModel:
             K_element = element.Ke  # Global stiffness matrix for the element
 
             dof_indices = element.dof_indices  # Use the pre-set DOF indices for the element
-            print(_id, element)
-            print(dof_indices)
             for i in range(2 * self.ND):
                 for j in range(2 * self.ND):
                     # add the i,j element of the local stiffness matrix to the element of the global stiffness matrix defined by the global dof indices.
