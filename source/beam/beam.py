@@ -23,24 +23,24 @@ class BeamElement:
     In this example there is no rotation of the element, so the local x-axis is aligned with the global x-axis.
     """
 
-    n1: Node  # MUST lie in the x-y plane
-    n2: Node  # MUST lie in the x-y plane
+    i: Node  # MUST lie in the x-y plane
+    j: Node  # MUST lie in the x-y plane
     A: float  # Cross-sectional area
     I: float  # Cross-section second moment of inertia
     E: float = 1.0  # Young's modulus
     ro: float = 1.0  # Density
 
     def __post_init__(self):
-        if self.n1.z is not None or self.n2.z is not None:
+        if self.i.z is not None or self.j.z is not None:
             raise ValueError("BeamElement nodes must lie in the x-y plane (z-coordinate must be None).")
-        if self.n1.y != self.n2.y:
+        if self.i.y != self.j.y:
             raise ValueError("BeamElement nodes y coordinate must be equal.")
         if self.A <= 0:
             raise ValueError("Cross-sectional area must be positive.")
 
     @property
     def length(self):
-        return self.n1.distance(self.n2)
+        return self.i.distance(self.j)
 
     @property
     def a(self):
