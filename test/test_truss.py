@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from source.node import Node
-from source.truss import TrussElement, TrussModel
+from source.truss.truss import TrussElement, TrussModel
 
 
 class TestTruss(unittest.TestCase):
@@ -52,6 +52,8 @@ class SingleElementTest(unittest.TestCase):
     """
 
     def setUp(self):
+        TrussElement.ID_counter = 0  # Reset element ID for consistent testing
+        Node.ID_counter = 0  # Reset element ID for consistent testing
 
         A = 0.1  # Cross-sectional area
         E = 7e10  # Young's modulus
@@ -59,7 +61,6 @@ class SingleElementTest(unittest.TestCase):
 
         n1 = Node(0, 0,)
         n2 = Node(1, 0,)
-        TrussElement.ID = 0  # Reset element ID for consistent testing
         self.model = TrussModel(
             nodes_=(n1, n2),
             elements_=((n1.ID, n2.ID, A, E, ro),),
@@ -93,6 +94,9 @@ class MultiElementTest(unittest.TestCase):
     """
 
     def setUp(self):
+        TrussElement.ID_counter = 0  # Reset element ID for consistent testing
+        Node.ID_counter = 0  # Reset element ID for consistent testing
+
         A = 0.1  # Cross-sectional area
         E = 7e10  # Young's modulus
         ro = 1.0  # Density
@@ -102,7 +106,6 @@ class MultiElementTest(unittest.TestCase):
         n3 = Node(-1, -1, 0)
         n4 = Node(1, -1, 0)
         n5 = Node(0, 0, 1)
-        TrussElement.ID = 0  # Reset element ID for consistent testing
         self.model = TrussModel(
             nodes_=(n1, n2, n3, n4, n5),
             elements_=(

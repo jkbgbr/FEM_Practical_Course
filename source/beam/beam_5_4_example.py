@@ -11,8 +11,8 @@ beam = BeamElement(n1, n2, A=0.1 * 0.06, I=0.06**3 * 0.1 / 12, E=69e9)
 # Calculate the stiffness matrix
 ke = beam.ke
 
-F = np.array([0, 0, 0, 0])  # Example force vector
-F[2] = -1000  # Apply a force in the y-direction at node 2
+# add load
+F = beam.load_vector(F2=-1000)  # Apply a force in the y-direction at node 2
 
 # eliminating the first node (fixed) and the corresponding forces
 F_eliminated = F[2:]  # Only keep forces at node 2
