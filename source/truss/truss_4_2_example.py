@@ -1,7 +1,7 @@
 import numpy as np
 
 from source.node import Node
-from source.truss import TrussModel
+from source.truss.truss import TrussModel
 
 
 A = 0.1  # Cross-sectional area
