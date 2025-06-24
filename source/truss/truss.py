@@ -5,7 +5,7 @@ import numpy as np
 
 from source.utils import IDMixin
 from source.node import Node
-from source.utils import assemble_global_K, apply_boundary_conditions
+from source.utils import assemble_global_K, apply_boundary_conditions, set_element_dof_indices
 
 
 @dataclass
@@ -209,24 +209,7 @@ class TrussModel:
         self.ND = self.elements[0].ND  # Number of DOF per node, taken from the first element
 
         # set the DOF indices for each element
-        self._set_element_dof_indices()
-
-    def _set_element_dof_indices(self):
-        """
-        This is for convenience only. It will set the global dof indices for each element so it doesn't
-        have to be done each time.
-        Set the element DOF indices for each element.
-        This is used to assemble the global stiffness matrix.
-        """
-        for element in self.elements.values():
-            # the _global_ DOF indices for this element
-            if self.ND == 2:
-                element._dof_indices = tuple([self.ND * element.i.ID, self.ND * element.i.ID + 1,
-                                             self.ND * element.j.ID, self.ND * element.j.ID + 1])
-            else:
-                element._dof_indices = tuple(
-                    [self.ND * element.i.ID, self.ND * element.i.ID + 1, self.ND * element.i.ID + 2,
-                     self.ND * element.j.ID, self.ND * element.j.ID + 1, self.ND * element.j.ID + 2])
+        self.elements = set_element_dof_indices(self.ND, self.elements)
 
     @property
     def K(self):

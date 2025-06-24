@@ -11,19 +11,20 @@ class IDMixin:
 
     If you implemented a new element or node class, you must inherit from this class and call
 
-    super().__init__(self.__class__.__name__)  # Call the IDMixin constructor to set the ID
+    super().__init__(__class__.__name__)  # Call the IDMixin constructor to set the ID
 
     """
     ID_counter = {}  # class variable to keep track of the ID of the element and node
 
     def __init__(self, class_name: str):
-        self.register_class(class_name)
-        _id = self.ID_counter.get(self.__class__.__name__)  # set the ID of the element or node
+        IDMixin.register_class(class_name)
+        _id = IDMixin.ID_counter.get(class_name)  # set the ID of the element or node
         if _id is None:
-            raise ValueError(f"IDMixin: Class {self.__class__.__name__} not found in ID_counter.")
+            raise ValueError(f"IDMixin: Class {class_name} not found in ID_counter.")
         self.ID = _id
-        self.ID_counter[self.__class__.__name__] += 1  # increment the ID counter for the next element or node
+        IDMixin.ID_counter[class_name] += 1  # increment the ID counter for the next element or node
 
+    @classmethod
     def register_class(cls, class_name: str):
         """
         Register a new class in the ID_counter dictionary.
@@ -102,3 +103,23 @@ def apply_boundary_conditions(ND: int, supports: dict, K: np.array, F: np.array)
             F[global_dof] = 0
 
     return K, F
+
+
+def set_element_dof_indices(ND, elements: dict):
+    """
+    This is for convenience only. It will set the global dof indices for each element so it doesn't
+    have to be done each time.
+    Set the element DOF indices for each element.
+    This is used to assemble the global stiffness matrix.
+    """
+    for element in elements.values():
+        # the _global_ DOF indices for this element
+        if ND == 2:
+            element._dof_indices = tuple([ND * element.i.ID, ND * element.i.ID + 1,
+                                         ND * element.j.ID, ND * element.j.ID + 1])
+        else:
+            element._dof_indices = tuple(
+                [ND * element.i.ID, ND * element.i.ID + 1, ND * element.i.ID + 2,
+                 ND * element.j.ID, ND * element.j.ID + 1, ND * element.j.ID + 2])
+
+    return elements
