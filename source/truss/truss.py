@@ -4,6 +4,7 @@ from typing import Tuple, ClassVar
 import numpy as np
 
 from source.node import Node
+from source.utils import assemble_global_K, apply_boundary_conditions
 
 
 @dataclass
@@ -225,55 +226,62 @@ class TrussModel:
                      self.ND * element.j.ID, self.ND * element.j.ID + 1, self.ND * element.j.ID + 2])
 
     @property
-    def K(self) -> np.array:
-        """
-        Global stiffness matrix for the truss model.
-
-        :return: Global stiffness matrix for the truss model.
-        """
-        n_dofs = self.ND * len(self.nodes)  # 3 degrees of freedom per node (x, y, z)
-        K_global = np.zeros((n_dofs, n_dofs))  # quadratic, symmetric
-        # Assemble the global stiffness matrix
-        for _id, element in self.elements.items():
-            K_element = element.Ke  # Global stiffness matrix for the element
-
-            dof_indices = element.dof_indices  # Use the pre-set DOF indices for the element
-            for i in range(2 * self.ND):
-                for j in range(2 * self.ND):
-                    # add the i,j element of the local stiffness matrix to the element of the global stiffness matrix defined by the global dof indices.
-                    K_global[dof_indices[i], dof_indices[j]] += K_element[i, j]
-
-        return K_global
+    def K(self):
+        return assemble_global_K(ND=self.ND, nodes=self.nodes, elements=self.elements)
 
     def apply_boundary_conditions(self, F: np.array) -> Tuple[np.array, np.array]:
-        """
-        Apply boundary conditions to the global stiffness matrix and force vector.
-        This method modifies the global stiffness matrix and force vector in place.
+        return apply_boundary_conditions(ND=self.ND, supports=self.supports, K=self.K, F=F)
 
-        :param F: Global force vector.
-        :return: Modified global stiffness matrix and force vector.
-        """
-        K = self.K
+    # @property
+    # def K(self) -> np.array:
+    #     """
+    #     Global stiffness matrix for the truss model.
+    #
+    #     :return: Global stiffness matrix for the truss model.
+    #     """
+    #     n_dofs = self.ND * len(self.nodes)  # 3 degrees of freedom per node (x, y, z)
+    #     K_global = np.zeros((n_dofs, n_dofs))  # quadratic, symmetric
+    #     # Assemble the global stiffness matrix
+    #     for _id, element in self.elements.items():
+    #         K_element = element.Ke  # Global stiffness matrix for the element
+    #
+    #         dof_indices = element.dof_indices  # Use the pre-set DOF indices for the element
+    #         for i in range(2 * self.ND):
+    #             for j in range(2 * self.ND):
+    #                 # add the i,j element of the local stiffness matrix to the element of the global stiffness matrix defined by the global dof indices.
+    #                 K_global[dof_indices[i], dof_indices[j]] += K_element[i, j]
+    #
+    #     return K_global
 
-        # # dofs will be removed from the stiffness matrix and force vector
-        # # this is done by first reverse sorting the supports by node_id and direction to avoid problems with indices changing after deletion
-        _supports = sorted(self.supports, key=lambda x: (x[0], x[1]), reverse=True)
-
-        for node_id, direction in _supports:
-            dof_index = self.ND * node_id + {'x': 0, 'y': 1, 'z': 2}[direction]
-
-            # Apply boundary conditions using the penalty method
-            # Set the row and column of the stiffness matrix to zero
-            K[dof_index, :] = 0
-            K[:, dof_index] = 0
-            # Set the diagonal element to a large value (to avoid singularity)
-            # note: the value 1e20 is arbitrary, it should be large enough to avoid numerical issues - check all other
-            # values in the global stiffness matrix
-            K[dof_index, dof_index] = 1e20
-            # Set the corresponding force to zero
-            F[dof_index] = 0
-
-        return K, F
+    # def apply_boundary_conditions(self, F: np.array) -> Tuple[np.array, np.array]:
+    #     """
+    #     Apply boundary conditions to the global stiffness matrix and force vector.
+    #     This method modifies the global stiffness matrix and force vector in place.
+    #
+    #     :param F: Global force vector.
+    #     :return: Modified global stiffness matrix and force vector.
+    #     """
+    #     K = self.K
+    #
+    #     # # dofs will be removed from the stiffness matrix and force vector
+    #     # # this is done by first reverse sorting the supports by node_id and direction to avoid problems with indices changing after deletion
+    #     _supports = sorted(self.supports, key=lambda x: (x[0], x[1]), reverse=True)
+    #
+    #     for node_id, direction in _supports:
+    #         dof_index = self.ND * node_id + {'x': 0, 'y': 1, 'z': 2}[direction]
+    #
+    #         # Apply boundary conditions using the penalty method
+    #         # Set the row and column of the stiffness matrix to zero
+    #         K[dof_index, :] = 0
+    #         K[:, dof_index] = 0
+    #         # Set the diagonal element to a large value (to avoid singularity)
+    #         # note: the value 1e20 is arbitrary, it should be large enough to avoid numerical issues - check all other
+    #         # values in the global stiffness matrix
+    #         K[dof_index, dof_index] = 1e20
+    #         # Set the corresponding force to zero
+    #         F[dof_index] = 0
+    #
+    #     return K, F
 
     def member_forces(self, u: np.array) -> np.array:
         """
