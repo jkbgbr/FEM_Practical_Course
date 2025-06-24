@@ -1,23 +1,18 @@
 from dataclasses import dataclass, field
-from typing import ClassVar
 
 import numpy as np
 
+from source.utils import IDMixin
 
 @dataclass
-class Node:
+class Node(IDMixin):
 
-    x: float
-    y: float
+    x: float = 0
+    y: float = 0
     z: float = None  # Default z-coordinate for 2D nodes
 
-    # Node ID.
-    # NOTE: This is a class variable, so it is shared across all instances of the class.
-    ID_counter: ClassVar[int] = 0  # class variable to keep track of the ID of the node
-
     def __post_init__(self):
-        self.ID = Node.ID_counter
-        Node.ID_counter += 1  # Increment the class variable ID
+        super().__init__(self.__class__.__name__)  # Call the IDMixin constructor to set the ID
 
     def __eq__(self, other):
         """Check if two nodes are equal based on their id and location."""

@@ -12,11 +12,12 @@ from dataclasses import dataclass
 import numpy as np
 import matplotlib.pyplot as plt
 
+from source.utils import IDMixin
 from source.node import Node
 
 
 @dataclass
-class BeamElement:
+class BeamElement(IDMixin):
 
     """
     A 2D beam element with two nodes in the x-y plane.
@@ -31,6 +32,7 @@ class BeamElement:
     ro: float = 1.0  # Density
 
     def __post_init__(self):
+        super().__init__(self.__class__.__name__)  # Call the IDMixin constructor to set the ID
         if self.i.z is not None or self.j.z is not None:
             raise ValueError("BeamElement nodes must lie in the x-y plane (z-coordinate must be None).")
         if self.i.y != self.j.y:
@@ -100,6 +102,10 @@ class BeamElement:
         ke *= self.E * self.I / (2 * a ** 3)
 
         return ke
+
+    @property
+    def Ke(self):
+        return self.ke
 
     @property
     def me(self):

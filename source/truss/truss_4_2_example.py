@@ -16,9 +16,7 @@ model = TrussModel(
     elements_=((n1.ID, n2.ID, A, E, ro),
                (n1.ID, n3.ID, A, E, ro),
                (n2.ID, n3.ID, A, E, ro),),
-    supports_=((0, 'x'), (0, 'y'), (2, 'x'),
-               (0, 'z'), (1, 'z'), (2, 'z')
-               ),
+    supports_={0: (0, 1, 2), 1: (2, ), 2: (0, 2)},
 )
 
 _F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero

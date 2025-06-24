@@ -4,11 +4,13 @@ import numpy as np
 
 from source.node import Node
 from source.truss.truss import TrussElement, TrussModel
+from source.utils import IDMixin
 
 
 class TestTruss(unittest.TestCase):
 
     def setUp(self):
+        IDMixin.reset()  # Reset ID counters for consistent testing
         self.n1 = Node(0, 0, 0)
         self.n2 = Node(1, 0, 0)
         self.e1 = TrussElement(self.n1, self.n2, A=1, E=1, ro=1)
@@ -52,8 +54,7 @@ class SingleElementTest(unittest.TestCase):
     """
 
     def setUp(self):
-        TrussElement.ID_counter = 0  # Reset element ID for consistent testing
-        Node.ID_counter = 0  # Reset element ID for consistent testing
+        IDMixin.reset()  # Reset ID counters for consistent testing
 
         A = 0.1  # Cross-sectional area
         E = 7e10  # Young's modulus
@@ -64,8 +65,7 @@ class SingleElementTest(unittest.TestCase):
         self.model = TrussModel(
             nodes_=(n1, n2),
             elements_=((n1.ID, n2.ID, A, E, ro),),
-            supports_=((0, 'x'), (0, 'y'),  # unloaded end: x, y displacement fixed
-                       (1, 'y')),  # loaded end: y displacement fixed
+            supports_={0: (0, 1), 1: (1, )},
         )
 
         self.load = np.zeros(self.model.ND * len(self.model.nodes))  # No external forces
@@ -94,8 +94,7 @@ class MultiElementTest(unittest.TestCase):
     """
 
     def setUp(self):
-        TrussElement.ID_counter = 0  # Reset element ID for consistent testing
-        Node.ID_counter = 0  # Reset element ID for consistent testing
+        IDMixin.reset()  # Reset ID counters for consistent testing
 
         A = 0.1  # Cross-sectional area
         E = 7e10  # Young's modulus
@@ -106,6 +105,7 @@ class MultiElementTest(unittest.TestCase):
         n3 = Node(-1, -1, 0)
         n4 = Node(1, -1, 0)
         n5 = Node(0, 0, 1)
+
         self.model = TrussModel(
             nodes_=(n1, n2, n3, n4, n5),
             elements_=(
@@ -114,12 +114,7 @@ class MultiElementTest(unittest.TestCase):
                 (n3.ID, n5.ID, A, E, ro),
                 (n4.ID, n5.ID, A, E, ro),
                        ),
-            supports_=(
-                (0, 'x'), (0, 'y'), (0, 'z'),
-                (1, 'x'), (1, 'y'), (1, 'z'),  # Node 2 fixed in x and y
-                (2, 'x'), (2, 'y'), (2, 'z'),  # Node 3 fixed in x and y
-                (3, 'x'), (3, 'y'), (3, 'z'),  # Node 4 fixed in x and y
-            )
+            supports_={k: list(range(3)) for k in range(4)}
         )
 
         self.load = np.zeros(self.model.ND * len(self.model.nodes))  # No external forces

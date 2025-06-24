@@ -7,7 +7,8 @@ from source.node import Node
 # Example usage
 n1 = Node(0, 0)
 n2 = Node(0.5, 0)
-beam = BeamElement(n1, n2, A=0.1 * 0.06, I=0.06**3 * 0.1 / 12, E=69e9)
+beam = BeamElement(i=n1, j=n2, A=0.1 * 0.06, I=0.06**3 * 0.1 / 12, E=69e9)
+
 # Calculate the stiffness matrix
 ke = beam.ke
 
