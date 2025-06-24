@@ -9,9 +9,9 @@ from source.beam.beam import BeamElement
 class TestBeam(unittest.TestCase):
 
     def setUp(self):
-        self.n1 = Node(0, 0)
-        self.n2 = Node(1, 0)
-        self.e1 = BeamElement(self.n1, self.n2, A=1, I=2, E=1, ro=1)
+        self.i = Node(0, 0)
+        self.j = Node(1, 0)
+        self.e1 = BeamElement(self.i, self.j, A=1, I=2, E=1, ro=1)
 
     def test_length(self):
         self.assertEqual(self.e1.a, 0.5)
