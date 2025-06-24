@@ -1,6 +1,6 @@
 import numpy as np
 
-from source.beam import BeamElement
+from source.beam.beam import BeamElement
 from source.node import Node
 
 
