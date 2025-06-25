@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
-from typing import Tuple, ClassVar, Dict
+from typing import Tuple, Dict
 
 import numpy as np
 
-from source.utils import IDMixin
-from source.node import Node
-from source.model import Model
+from source.OneD.utils import IDMixin
+from source.OneD.node import Node
+from source.OneD.model import Model
 # from source.utils import assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
 
 

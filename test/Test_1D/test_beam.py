@@ -1,11 +1,10 @@
-import pprint
 import unittest
 
 import numpy as np
 
-from source.node import Node
-from source.beam.beam import BeamElement, BeamModel
-from source.utils import IDMixin
+from source.OneD.node import Node
+from source.OneD.beam.beam import BeamElement, BeamModel
+from source.OneD.utils import IDMixin
 
 
 class TestBeam(unittest.TestCase):

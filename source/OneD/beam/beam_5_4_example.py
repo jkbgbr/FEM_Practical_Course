@@ -1,7 +1,7 @@
 import numpy as np
 
-from source.beam.beam import BeamElement
-from source.node import Node
+from source.OneD.beam.beam import BeamElement
+from source.OneD.node import Node
 
 
 # Example usage

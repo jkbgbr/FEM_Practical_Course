@@ -13,9 +13,9 @@ from typing import Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from source.utils import IDMixin# , assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
-from source.node import Node
-from source.model import Model
+from source.OneD.utils import IDMixin# , assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
+from source.OneD.node import Node
+from source.OneD.model import Model
 
 
 

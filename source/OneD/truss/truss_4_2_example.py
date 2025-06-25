@@ -1,7 +1,7 @@
 import numpy as np
 
-from source.node import Node
-from source.truss.truss import TrussModel
+from source.OneD.node import Node
+from source.OneD.truss.truss import TrussModel
 
 
 A = 0.1  # Cross-sectional area
@@ -33,7 +33,6 @@ print('Global force vector F:\n', _F)
 
 # Solve the system of equations K * u = F for the displacements u
 _U = np.linalg.solve(_K, _F)
-np.set_printoptions(precision=2, suppress=False, linewidth=120)
 print()
 print('Results:')
 print("Global displacements:", _U)

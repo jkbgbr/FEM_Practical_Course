@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
-from source.utils import IDMixin
+from source.OneD.utils import IDMixin
 
 @dataclass
 class Node(IDMixin):
