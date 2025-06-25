@@ -123,3 +123,20 @@ def set_element_dof_indices(ND, elements: dict):
                  ND * element.j.ID, ND * element.j.ID + 1, ND * element.j.ID + 2])
 
     return elements
+
+
+
+def reaction_forces(K: np.array, u: np.array, f_external: np.array) -> np.array:
+    """
+    Calculates the reaction forces at the supports.
+    The reaction forces are calculated using the formula R = K * u - F.
+
+    :param K: Global stiffness matrix.
+    :param u: The displacement vector (solution of the system after applying BCs).
+    :param f_external: The original global external force vector (before applying BCs).
+    :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
+    """
+
+    reactions = K @ u - f_external
+
+    return reactions

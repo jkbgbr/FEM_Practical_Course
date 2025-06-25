@@ -5,7 +5,7 @@ import numpy as np
 
 from source.utils import IDMixin
 from source.node import Node
-from source.utils import assemble_global_K, apply_boundary_conditions, set_element_dof_indices
+from source.utils import assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
 
 
 @dataclass
@@ -253,18 +253,7 @@ class TrussModel:
         return forces
 
     def reaction_forces(self, u: np.array, f_external: np.array) -> np.array:
-        """
-        Calculates the reaction forces at the supports.
-        The reaction forces are calculated using the formula R = K * u - F.
-
-        :param u_reduced: The reduced displacement vector (solution of the system after applying BCs).
-        :param f_external: The original global external force vector (before applying BCs).
-        :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
-        """
-
-        reactions = self.K @ u - f_external
-
-        return reactions
+        return reaction_forces(self.K, u, f_external)
 
     def plot_truss(self, u: np.array = None, disp_factor: float = None):
         """
@@ -322,6 +311,5 @@ class TrussModel:
                     x_ = x_[0] + element.i.coords[0], x_[1] + element.j.coords[0]
                     y_ = y_[0] + element.i.coords[1], y_[1] + element.j.coords[1]
                     ax.plot(x_, y_, 'ro-')
-
 
             plt.show()

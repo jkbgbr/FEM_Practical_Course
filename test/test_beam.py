@@ -50,7 +50,7 @@ class TesBeamModel(unittest.TestCase):
         E = 7e10  # Young's modulus
         ro = 1.0  # Density
 
-        # number of elements for the first model; one element more
+        # number of elements for the A model; B has one element more
         NE = 100
         L = 10
 
@@ -66,13 +66,10 @@ class TesBeamModel(unittest.TestCase):
             elements_=elements,
             supports_={0: (0, 1)},
         )
-        self.load_A = np.zeros(self.model_A.ND * len(self.model_A.nodes))
-        self.load_A[-2] = -1000
 
         IDMixin.reset()  # Reset ID counters for consistent testing
         NE = NE + 1
         mesh = np.linspace(0, L, NE + 1)  # mesh points along the beam
-        print(max(mesh))
         # Create nodes based on the mesh
         nodes = tuple(Node(x, 0, None) for x in mesh)  # nodes in the X-Y plane, Z=0
         elements = tuple(
@@ -84,10 +81,16 @@ class TesBeamModel(unittest.TestCase):
             elements_=elements,
             supports_={0: (0, 1)},
         )
-        self.load_B = np.zeros(self.model_B.ND * len(self.model_B.nodes))
-        self.load_B[-2] = -1000
 
     def test_max_deflection(self):
+        "Cantilever beams with different number of elements should have the same maximum deflection"
+
+        self.load_A = np.zeros(self.model_A.ND * len(self.model_A.nodes))
+        self.load_A[-2] = -1000  # Load applied at the last node in the y-direction
+
+        self.load_B = np.zeros(self.model_B.ND * len(self.model_B.nodes))
+        self.load_B[-2] = -1000  # Load applied at the last node in the y-direction
+
         # defleiction, model A
         _K, _F = self.model_A.apply_boundary_conditions(self.load_A)  # Apply boundary conditions
         _U_A = np.linalg.solve(_K, _F)
@@ -98,11 +101,8 @@ class TesBeamModel(unittest.TestCase):
         _U_B = np.linalg.solve(_K, _F)
         R_B = self.model_B.reaction_forces(_U_B, _F)
 
-        print(_U_A[-2], _U_B[-2])
-        print(R_A[:2], R_B[:2])
-        # self.assertAlmostEqual(_U_A[-2], _U_B[-2], places=5)
-
-
+        self.assertAlmostEqual(_U_A[-2] / _U_B[-2], 1, delta=1e-8)
+        np.testing.assert_allclose(R_A[:2] / R_B[:2], 1, atol=1e-8)
 
 
 if __name__ == '__main__':

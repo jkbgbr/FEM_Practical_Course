@@ -13,7 +13,7 @@ from typing import Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from source.utils import IDMixin, assemble_global_K, apply_boundary_conditions, set_element_dof_indices
+from source.utils import IDMixin, assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
 from source.node import Node
 
 
@@ -260,7 +260,6 @@ class BeamModel:
         # Convert nodes and elements to dictionaries for easy access
         # This allows for quick lookups by node ID and element ID
         self.nodes = {node.ID: node for node in self.nodes_}  # Convert nodes to a dictionary for easy access
-        print(self.nodes)
         elements_ = tuple(
             BeamElement(i=self.nodes[x[0]], j=self.nodes[x[1]], A=x[2], I=x[3], E=x[4], ro=x[5]) for x in self.elements_)
         self.elements = {x.ID: x for x in elements_}  # Convert elements to a dictionary for easy access
@@ -277,15 +276,4 @@ class BeamModel:
         return apply_boundary_conditions(ND=self.ND, supports=self.supports, K=self.K, F=F)
 
     def reaction_forces(self, u: np.array, f_external: np.array) -> np.array:
-        """
-        Calculates the reaction forces at the supports.
-        The reaction forces are calculated using the formula R = K * u - F.
-
-        :param u_reduced: The reduced displacement vector (solution of the system after applying BCs).
-        :param f_external: The original global external force vector (before applying BCs).
-        :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
-        """
-
-        reactions = self.K @ u - f_external
-
-        return reactions
+        return reaction_forces(self.K, u, f_external)
