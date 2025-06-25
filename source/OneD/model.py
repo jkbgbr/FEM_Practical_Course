@@ -95,3 +95,16 @@ class Model:
     def K(self):
         """The global stiffness matrix should be assembled only once."""
         return self.assemble_global_K()
+
+    def solve(self, F):
+        """
+        Solve the system for the given load
+
+        :param F:
+        :return:
+        """
+        _K, _F = self.apply_boundary_conditions(F)  # Apply boundary conditions
+        _u = np.linalg.solve(_K, _F)
+        _re = self.reaction_forces(_u, _F)
+
+        return _u, _re

@@ -50,7 +50,7 @@ class TesBeamModel(unittest.TestCase):
         ro = 1.0  # Density
 
         # number of elements for the A model; B has one element more
-        NE = 1
+        NE = 10
         L = 10
 
         mesh = np.linspace(0, L, NE + 1)  # mesh points along the beam
@@ -81,6 +81,22 @@ class TesBeamModel(unittest.TestCase):
             supports_={0: (0, 1)},
         )
 
+        # clamped-clamped beam model
+        IDMixin.reset()  # Reset ID counters for consistent testing
+        NE = 4  # number of elements
+        L = 2.5  # total length of the beam
+        mesh = np.linspace(0, L, NE + 1)  # mesh points along the beam
+        # Create nodes based on the mesh
+        nodes = tuple(Node(x, 0, None) for x in mesh)  # nodes in the X-Y plane, Z=0
+        elements = tuple(
+            (nodes[i].ID, nodes[i + 1].ID, A, I, E, ro) for i in range(NE)
+        )
+        self.model_C = BeamModel(
+            nodes_=nodes,
+            elements_=elements,
+            supports_={0: (0, 1), NE: (0, 1)},
+        )
+
     def test_max_deflection(self):
         "Cantilever beams with different number of elements should have the same maximum deflection"
 
@@ -102,6 +118,45 @@ class TesBeamModel(unittest.TestCase):
 
         self.assertAlmostEqual(_U_A[-2] / _U_B[-2], 1, delta=1e-8)
         np.testing.assert_allclose(R_A[:2] / R_B[:2], 1, atol=1e-8)
+
+    def test_point_load(self):
+        # point load in the middle.
+        # 4 elements, 5 nodes
+        element = self.model_C.elements[1]  # the j node of the second element is the middle node of the beam model.
+        element.load_vector(F2=-1000)  # a vertical load
+
+        _F = np.zeros(self.model_C.ND * len(self.model_C.nodes))
+        _F[element.j.ID * self.model_C.ND] = -1000
+        u, r = self.model_C.solve(_F)
+
+        self.assertAlmostEqual(r[0], 500, delta=1e-8)  # Reaction force at the first node
+        self.assertAlmostEqual(r[1], 1000 * 2.5 / 8, delta=1e-8)  # Reaction force at the first node
+        self.assertAlmostEqual(r[-2], 500, delta=1e-8)  # Reaction force at the first node
+        self.assertAlmostEqual(r[-1], -1000 * 2.5 / 8, delta=1e-8)  # Reaction force at the first node
+
+        self.assertAlmostEqual(u[0], 0, delta=1e-8)  # Displacement at the first node
+        self.assertAlmostEqual(u[1], 0, delta=1e-8)  # Rotation at the first node
+        self.assertAlmostEqual(u[-2], 0, delta=1e-8)
+        self.assertAlmostEqual(u[-1], 0, delta=1e-8)
+
+    # def test_uniform_load(self):
+    #     # uniform load along the beam
+    #     # 4 elements, 5 nodes
+    #     _F = np.zeros(self.model_C.ND * len(self.model_C.nodes))
+    #     for element in self.model_C.elements.values():
+    #         _f = element.load_vector(q=-1000)  # a vertical uniform load
+    #         _F[list(element.dof_indices)] += _f
+    #     print(_F)
+    #     u, r = self.model_C.solve(_F)
+    #     print(u)
+    #     print(r)
+    #     element.plot_deflections([n.x for n in self.model_C.nodes.values()], u)
+    #
+
+
+
+
+
 
 
 if __name__ == '__main__':
