@@ -8,11 +8,12 @@ in (5.20) correctly: N3" = -3/2 * ksi
 """
 
 from dataclasses import dataclass
+from typing import Tuple, Dict
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from source.utils import IDMixin
+from source.utils import IDMixin, assemble_global_K, apply_boundary_conditions, set_element_dof_indices
 from source.node import Node
 
 
@@ -40,9 +41,19 @@ class BeamElement(IDMixin):
         if self.A <= 0:
             raise ValueError("Cross-sectional area must be positive.")
 
+    _length: float = None  # Length of the truss element, can be calculated
+    _dof_indices: tuple = None  # DOF indices for the element in the model, to be set later by the model
+
     @property
-    def length(self):
-        return self.i.distance(self.j)
+    def length(self) -> float:
+        """Calculate the length of the truss element."""
+        if self._length is None:
+            self._length = self.i.distance(self.j)
+        return self._length
+
+    @property
+    def dof_indices(self):
+        return self._dof_indices
 
     @property
     def a(self):
@@ -228,3 +239,53 @@ class BeamElement(IDMixin):
         plt.legend()
         plt.grid()
         plt.show()
+
+
+@dataclass
+class BeamModel:
+    """
+    A model for a beam structure consisting of multiple beam elements.
+    This class can be used to assemble the global stiffness matrix and load vector for the entire beam structure.
+    """
+
+    nodes_: Tuple[Node, ...] = None  # Nodes in the truss model
+    elements_: Tuple[Tuple[
+        int, int, float, float, float, float], ...] = None  # A nested tuple. # Elements in the truss model, each defined by (node_i_id, node_j_id, A, E, ro)
+    supports_: Dict[int, Tuple[int, ...]] = None  # Supports. Node ID: local dof numbers e.g. {0: (0, 1, 2)}
+
+    # not checkd if all elements have the same number of DOF per node, but it is assumed that they do.
+    ND: int = 2  # Number of DOF per node
+
+    def __post_init__(self):
+        # Convert nodes and elements to dictionaries for easy access
+        # This allows for quick lookups by node ID and element ID
+        self.nodes = {node.ID: node for node in self.nodes_}  # Convert nodes to a dictionary for easy access
+        print(self.nodes)
+        elements_ = tuple(
+            BeamElement(i=self.nodes[x[0]], j=self.nodes[x[1]], A=x[2], I=x[3], E=x[4], ro=x[5]) for x in self.elements_)
+        self.elements = {x.ID: x for x in elements_}  # Convert elements to a dictionary for easy access
+        self.supports = self.supports_ if self.supports_ is not None else tuple()  # Supports, a tuple of (node_id, direction)
+
+        # set the DOF indices for each element
+        self.elements = set_element_dof_indices(self.ND, self.elements)
+
+    @property
+    def K(self):
+        return assemble_global_K(ND=self.ND, nodes=self.nodes, elements=self.elements)
+
+    def apply_boundary_conditions(self, F: np.array) -> Tuple[np.array, np.array]:
+        return apply_boundary_conditions(ND=self.ND, supports=self.supports, K=self.K, F=F)
+
+    def reaction_forces(self, u: np.array, f_external: np.array) -> np.array:
+        """
+        Calculates the reaction forces at the supports.
+        The reaction forces are calculated using the formula R = K * u - F.
+
+        :param u_reduced: The reduced displacement vector (solution of the system after applying BCs).
+        :param f_external: The original global external force vector (before applying BCs).
+        :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
+        """
+
+        reactions = self.K @ u - f_external
+
+        return reactions
