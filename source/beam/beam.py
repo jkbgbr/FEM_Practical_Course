@@ -13,8 +13,10 @@ from typing import Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from source.utils import IDMixin, assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
+from source.utils import IDMixin# , assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
 from source.node import Node
+from source.model import Model
+
 
 
 @dataclass
@@ -242,7 +244,7 @@ class BeamElement(IDMixin):
 
 
 @dataclass
-class BeamModel:
+class BeamModel(Model):
     """
     A model for a beam structure consisting of multiple beam elements.
     This class can be used to assemble the global stiffness matrix and load vector for the entire beam structure.
@@ -266,14 +268,4 @@ class BeamModel:
         self.supports = self.supports_ if self.supports_ is not None else tuple()  # Supports, a tuple of (node_id, direction)
 
         # set the DOF indices for each element
-        self.elements = set_element_dof_indices(self.ND, self.elements)
-
-    @property
-    def K(self):
-        return assemble_global_K(ND=self.ND, nodes=self.nodes, elements=self.elements)
-
-    def apply_boundary_conditions(self, F: np.array) -> Tuple[np.array, np.array]:
-        return apply_boundary_conditions(ND=self.ND, supports=self.supports, K=self.K, F=F)
-
-    def reaction_forces(self, u: np.array, f_external: np.array) -> np.array:
-        return reaction_forces(self.K, u, f_external)
+        self.elements = self.set_element_dof_indices()

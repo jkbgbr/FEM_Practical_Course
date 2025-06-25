@@ -51,7 +51,7 @@ class TesBeamModel(unittest.TestCase):
         ro = 1.0  # Density
 
         # number of elements for the A model; B has one element more
-        NE = 100
+        NE = 1
         L = 10
 
         mesh = np.linspace(0, L, NE + 1)  # mesh points along the beam

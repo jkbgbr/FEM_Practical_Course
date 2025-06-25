@@ -22,7 +22,7 @@ model = TrussModel(
 _F = np.zeros(model.ND * len(model.nodes))  # Global force vector, initialized to zero
 _F[model.ND + 1] = -1000  # Apply a force of -1000 N in the y-direction at node 2 (index 1)
 
-np.set_printoptions(precision=3, suppress=True, linewidth=120)
+np.set_printoptions(precision=2, suppress=True, linewidth=120)
 print("Global stiffness matrix K before applying the BCs:\n", model.K)
 
 _K, _F = model.apply_boundary_conditions(_F)  # Apply boundary conditions
@@ -33,7 +33,7 @@ print('Global force vector F:\n', _F)
 
 # Solve the system of equations K * u = F for the displacements u
 _U = np.linalg.solve(_K, _F)
-np.set_printoptions(precision=3, suppress=False, linewidth=120)
+np.set_printoptions(precision=2, suppress=False, linewidth=120)
 print()
 print('Results:')
 print("Global displacements:", _U)

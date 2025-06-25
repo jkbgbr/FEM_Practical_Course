@@ -5,7 +5,8 @@ import numpy as np
 
 from source.utils import IDMixin
 from source.node import Node
-from source.utils import assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
+from source.model import Model
+# from source.utils import assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
 
 
 @dataclass
@@ -175,7 +176,7 @@ class TrussElement(IDMixin):
 
 
 @dataclass
-class TrussModel:
+class TrussModel(Model):
     """
     A model for a truss structure, containing multiple truss elements.
     """
@@ -209,14 +210,7 @@ class TrussModel:
         self.ND = self.elements[0].ND  # Number of DOF per node, taken from the first element
 
         # set the DOF indices for each element
-        self.elements = set_element_dof_indices(self.ND, self.elements)
-
-    @property
-    def K(self):
-        return assemble_global_K(ND=self.ND, nodes=self.nodes, elements=self.elements)
-
-    def apply_boundary_conditions(self, F: np.array) -> Tuple[np.array, np.array]:
-        return apply_boundary_conditions(ND=self.ND, supports=self.supports, K=self.K, F=F)
+        self.elements = self.set_element_dof_indices()
 
     def member_forces(self, u: np.array) -> np.array:
         """
@@ -251,9 +245,6 @@ class TrussModel:
             forces.append(res)  # Store the force at node i (the second node in the element)
 
         return forces
-
-    def reaction_forces(self, u: np.array, f_external: np.array) -> np.array:
-        return reaction_forces(self.K, u, f_external)
 
     def plot_truss(self, u: np.array = None, disp_factor: float = None):
         """

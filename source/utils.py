@@ -45,98 +45,98 @@ class IDMixin:
         """
         cls.ID_counter = {}
 
-
-def assemble_global_K(ND: int, nodes: np.array, elements: np.array, ) -> np.array:
-    """
-    Global stiffness matrix for the truss model.
-
-    :return: Global stiffness matrix for the truss model.
-    """
-    n_dofs = ND * len(nodes)  # 3 degrees of freedom per node (x, y, z)
-    K_global = np.zeros((n_dofs, n_dofs))  # quadratic, symmetric
-    # Assemble the global stiffness matrix
-    for _id, element in elements.items():
-        K_element = element.Ke  # Global stiffness matrix for the element
-
-        dof_indices = element.dof_indices  # Use the pre-set DOF indices for the element
-        for i in range(2 * ND):
-            for j in range(2 * ND):
-                # add the i,j element of the local stiffness matrix to the element of the global stiffness matrix defined by the global dof indices.
-                K_global[dof_indices[i], dof_indices[j]] += K_element[i, j]
-
-    return K_global
-
-
-def apply_boundary_conditions(ND: int, supports: dict, K: np.array, F: np.array) -> Tuple[np.array, np.array]:
-    """
-    Apply boundary conditions to the global stiffness matrix and force vector.
-    This method modifies the global stiffness matrix and force vector in place.
-
-    Supports: a dict with the node ID as key and a list of local DOFs as value.
-    The local DOFs are the indices of the degrees of freedom that are constrained and these depend on the element.
-
-    :param ND:
-    :param supports: Dictionary of supports where keys are node IDs and values are lists of local DOFs.
-    :param F: Global force vector.
-    :param K: stiffness matrix.
-    :return: Modified global stiffness matrix and force vector.
-    """
-
-    # # dofs will be removed from the stiffness matrix and force vector
-    # # this is done by first reverse sorting the supports by node_id and direction to avoid problems with indices changing after deletion
-
-    # sort the supports dirct by keys in descending order
-    supports = dict(sorted(supports.items(), key=lambda x: (x[0], x[1]), reverse=True))
-
-    for node_id, local_dofs in supports.items():
-        for local_dof in local_dofs:
-            global_dof = ND * node_id + local_dof
-            # Apply boundary conditions using the penalty method
-            # Set the row and column of the stiffness matrix to zero
-            K[global_dof, :] = 0
-            K[:, global_dof] = 0
-            # Set the diagonal element to a large value (to avoid singularity)
-            # note: the value 1e20 is arbitrary, it should be large enough to avoid numerical issues - check all other
-            # values in the global stiffness matrix
-            K[global_dof, global_dof] = 1e20
-            # Set the corresponding force to zero
-            F[global_dof] = 0
-
-    return K, F
-
-
-def set_element_dof_indices(ND, elements: dict):
-    """
-    This is for convenience only. It will set the global dof indices for each element so it doesn't
-    have to be done each time.
-    Set the element DOF indices for each element.
-    This is used to assemble the global stiffness matrix.
-    """
-    for element in elements.values():
-        # the _global_ DOF indices for this element
-        if ND == 2:
-            element._dof_indices = tuple([ND * element.i.ID, ND * element.i.ID + 1,
-                                         ND * element.j.ID, ND * element.j.ID + 1])
-        else:
-            element._dof_indices = tuple(
-                [ND * element.i.ID, ND * element.i.ID + 1, ND * element.i.ID + 2,
-                 ND * element.j.ID, ND * element.j.ID + 1, ND * element.j.ID + 2])
-
-    return elements
-
-
-
-def reaction_forces(K: np.array, u: np.array, f_external: np.array) -> np.array:
-    """
-    Calculates the reaction forces at the supports.
-    The reaction forces are calculated using the formula R = K * u - F.
-
-    :param K: Global stiffness matrix.
-    :param u: The displacement vector (solution of the system after applying BCs).
-    :param f_external: The original global external force vector (before applying BCs).
-    :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
-    """
-
-    reactions = K @ u - f_external
-
-    return reactions
+#
+# def assemble_global_K(ND: int, nodes: np.array, elements: np.array, ) -> np.array:
+#     """
+#     Global stiffness matrix for the truss model.
+#
+#     :return: Global stiffness matrix for the truss model.
+#     """
+#     n_dofs = ND * len(nodes)  # 3 degrees of freedom per node (x, y, z)
+#     K_global = np.zeros((n_dofs, n_dofs))  # quadratic, symmetric
+#     # Assemble the global stiffness matrix
+#     for _id, element in elements.items():
+#         K_element = element.Ke  # Global stiffness matrix for the element
+#
+#         dof_indices = element.dof_indices  # Use the pre-set DOF indices for the element
+#         for i in range(2 * ND):
+#             for j in range(2 * ND):
+#                 # add the i,j element of the local stiffness matrix to the element of the global stiffness matrix defined by the global dof indices.
+#                 K_global[dof_indices[i], dof_indices[j]] += K_element[i, j]
+#
+#     return K_global
+#
+#
+# def apply_boundary_conditions(ND: int, supports: dict, K: np.array, F: np.array) -> Tuple[np.array, np.array]:
+#     """
+#     Apply boundary conditions to the global stiffness matrix and force vector.
+#     This method modifies the global stiffness matrix and force vector in place.
+#
+#     Supports: a dict with the node ID as key and a list of local DOFs as value.
+#     The local DOFs are the indices of the degrees of freedom that are constrained and these depend on the element.
+#
+#     :param ND:
+#     :param supports: Dictionary of supports where keys are node IDs and values are lists of local DOFs.
+#     :param F: Global force vector.
+#     :param K: stiffness matrix.
+#     :return: Modified global stiffness matrix and force vector.
+#     """
+#
+#     # # dofs will be removed from the stiffness matrix and force vector
+#     # # this is done by first reverse sorting the supports by node_id and direction to avoid problems with indices changing after deletion
+#
+#     # sort the supports dirct by keys in descending order
+#     supports = dict(sorted(supports.items(), key=lambda x: (x[0], x[1]), reverse=True))
+#
+#     for node_id, local_dofs in supports.items():
+#         for local_dof in local_dofs:
+#             global_dof = ND * node_id + local_dof
+#             # Apply boundary conditions using the penalty method
+#             # Set the row and column of the stiffness matrix to zero
+#             K[global_dof, :] = 0
+#             K[:, global_dof] = 0
+#             # Set the diagonal element to a large value (to avoid singularity)
+#             # note: the value 1e20 is arbitrary, it should be large enough to avoid numerical issues - check all other
+#             # values in the global stiffness matrix
+#             K[global_dof, global_dof] = 1e20
+#             # Set the corresponding force to zero
+#             F[global_dof] = 0
+#
+#     return K, F
+#
+#
+# def set_element_dof_indices(ND, elements: dict):
+#     """
+#     This is for convenience only. It will set the global dof indices for each element so it doesn't
+#     have to be done each time.
+#     Set the element DOF indices for each element.
+#     This is used to assemble the global stiffness matrix.
+#     """
+#     for element in elements.values():
+#         # the _global_ DOF indices for this element
+#         if ND == 2:
+#             element._dof_indices = tuple([ND * element.i.ID, ND * element.i.ID + 1,
+#                                          ND * element.j.ID, ND * element.j.ID + 1])
+#         else:
+#             element._dof_indices = tuple(
+#                 [ND * element.i.ID, ND * element.i.ID + 1, ND * element.i.ID + 2,
+#                  ND * element.j.ID, ND * element.j.ID + 1, ND * element.j.ID + 2])
+#
+#     return elements
+#
+#
+#
+# def reaction_forces(K: np.array, u: np.array, f_external: np.array) -> np.array:
+#     """
+#     Calculates the reaction forces at the supports.
+#     The reaction forces are calculated using the formula R = K * u - F.
+#
+#     :param K: Global stiffness matrix.
+#     :param u: The displacement vector (solution of the system after applying BCs).
+#     :param f_external: The original global external force vector (before applying BCs).
+#     :return: The vector of reaction forces. Non-zero values exist only at supported DOFs.
+#     """
+#
+#     reactions = K @ u - f_external
+#
+#     return reactions
