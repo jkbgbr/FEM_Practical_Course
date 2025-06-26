@@ -5,6 +5,11 @@ worked example 5.4
 There is an error in the 2nd edition (Elsevier, 2014)
 in (5.14) correctly: N3 = 1/4 * (2 + 3 * ksi - ksi**3)
 in (5.20) correctly: N3" = -3/2 * ksi
+
+This is a 2D beam element with two nodes in the x-y plane.
+The formulation results correct displacements, but the internal actions are poorly approximated.
+This is a simple linear beam element, not accounting for shear deformation.
+
 """
 
 from dataclasses import dataclass
@@ -269,3 +274,36 @@ class BeamModel(Model):
 
         # set the DOF indices for each element
         self.elements = self.set_element_dof_indices()
+
+    def plot_model(self, u: np.ndarray):
+        """Plots the beam model: original and deformed shape."""
+        # Plot the original beam structure
+        for element in self.elements.values():
+            x = [element.i.x, element.j.x]
+            y = [element.i.y, element.j.y]
+            plt.plot(x, y, 'b-', label='Original Beam')
+
+        # Plot the deformed shape
+        for element in self.elements.values():
+            xs = np.linspace(element.i.x, element.j.x, 20)
+            ys = []
+            for x in xs:
+                ksi = (x - element.i.x) / element.length * 2 - 1  # Normalize ksi to [-1, 1]
+                # Calculate the deflection at this point
+                ys.append(element.base_functions(ksi) @ u[element.dof_indices])
+            plt.plot(xs, ys, 'b--', label='Deformed Beam')
+        # Plot the nodes
+        displ = u[::2]
+        for node, _u in zip(self.nodes.values(), displ):
+            plt.plot(node.x, node.y + _u, 'ro')
+        plt.xlabel('X (m)')
+        plt.ylabel('Y (m)')
+        plt.title('Beam Model: Original and Deformed Shape')
+        plt.axhline(0, color='black', lw=0.5, ls='--')
+        plt.axvline(0, color='black', lw=0.5, ls='--')
+        # adding the displacement values to the nodes
+        for node, _u in zip(self.nodes.values(), displ):
+            plt.text(node.x, node.y + _u, f'{_u:.4g}', rotation=90)
+        plt.grid()
+        # plt.axis('equal')
+        plt.show()

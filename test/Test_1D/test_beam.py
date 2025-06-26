@@ -4,6 +4,7 @@ import numpy as np
 
 from source.OneD.node import Node
 from source.OneD.beam.beam import BeamElement, BeamModel
+from source.OneD.beam.timoschenko_2D import TimoschenkoBeamModel, TimoshenkoBeamElement
 from source.OneD.utils import IDMixin
 
 
@@ -139,20 +140,16 @@ class TesBeamModel(unittest.TestCase):
         self.assertAlmostEqual(u[-2], 0, delta=1e-8)
         self.assertAlmostEqual(u[-1], 0, delta=1e-8)
 
-    # def test_uniform_load(self):
-    #     # uniform load along the beam
-    #     # 4 elements, 5 nodes
-    #     _F = np.zeros(self.model_C.ND * len(self.model_C.nodes))
-    #     for element in self.model_C.elements.values():
-    #         _f = element.load_vector(q=-1000)  # a vertical uniform load
-    #         _F[list(element.dof_indices)] += _f
-    #     print(_F)
-    #     u, r = self.model_C.solve(_F)
-    #     print(u)
-    #     print(r)
-    #     element.plot_deflections([n.x for n in self.model_C.nodes.values()], u)
-    #
+    def test_uniform_load(self):
+        # uniform load along the beam, deflection is tested at the middle node.
+        _F = np.zeros(self.model_C.ND * len(self.model_C.nodes))
+        for element in self.model_C.elements.values():
+            _f = element.load_vector(q=-1000)  # a vertical uniform load
+            _F[element.dof_indices] += _f
 
+        u, reactions = self.model_C.solve(_F)
+        self.assertAlmostEqual(u[0], 0, delta=1e-8)
+        self.assertAlmostEqual(min(u[::2]), -1000*2.5**4/(384*element.E*element.I), delta=1e-8)
 
 
 

@@ -69,10 +69,10 @@ class Model:
         for element in self.elements.values():
             # the _global_ DOF indices for this element
             if ND == 2:
-                element._dof_indices = tuple([ND * element.i.ID, ND * element.i.ID + 1,
+                element._dof_indices = list([ND * element.i.ID, ND * element.i.ID + 1,
                                               ND * element.j.ID, ND * element.j.ID + 1])
             else:
-                element._dof_indices = tuple(
+                element._dof_indices = list(
                     [ND * element.i.ID, ND * element.i.ID + 1, ND * element.i.ID + 2,
                      ND * element.j.ID, ND * element.j.ID + 1, ND * element.j.ID + 2])
 

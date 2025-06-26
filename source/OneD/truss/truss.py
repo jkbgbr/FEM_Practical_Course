@@ -223,7 +223,7 @@ class TrussModel(Model):
 
         # Iterate over each element and calculate the member force
         for i, element in self.elements.items():
-            Du = u[list(element.dof_indices)]  # global displacements of the nodes in the element
+            Du = u[element.dof_indices]  # global displacements of the nodes in the element
             _T = element.transformation_matrix
             # Transform the global displacements to local displacements
             du = _T @ Du
