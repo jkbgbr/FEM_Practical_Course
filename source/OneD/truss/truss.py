@@ -105,7 +105,7 @@ class TrussElement(IDMixin):
     @property
     def me(self) -> np.array:
         """
-        Mass matrix of the truss element.
+        Consistent mass matrix of the truss element.
         (4.16) in the book.
         See truss.md for the derivation.
         :return:

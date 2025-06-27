@@ -4,7 +4,6 @@ import numpy as np
 
 from source.OneD.node import Node
 from source.OneD.beam.beam import BeamElement, BeamModel
-from source.OneD.beam.timoschenko_2D import TimoschenkoBeamModel, TimoshenkoBeamElement
 from source.OneD.utils import IDMixin
 
 
@@ -151,6 +150,7 @@ class TesBeamModel(unittest.TestCase):
         self.assertAlmostEqual(u[0], 0, delta=1e-8)
         self.assertAlmostEqual(min(u[::2]), -1000*2.5**4/(384*element.E*element.I), delta=1e-8)
 
+        self.model_C.plot_model(u=u)
 
 
 

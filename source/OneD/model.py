@@ -5,11 +5,27 @@ from typing import Tuple
 
 class Model:
 
+    def assemble_lumped_M(self) -> np.array:
+        """
+        Lumped mass matrix for the model,
+
+        :return:
+        """
+        n_dofs = self.ND * len(self.nodes)
+        M_global = np.zeros((n_dofs, n_dofs))  # quadratic, symmetric
+        for _id, element in self.elements.items():
+            M_element = element.Me
+            dof_indices = element.dof_indices
+            for i in range(2 * self.ND):
+                M_global[dof_indices[i], dof_indices[i]] += M_element[i, i]  # Lumped mass matrix, only diagonal elements are non-zero
+
+        return M_global
+
     def assemble_global_K(self) -> np.array:
         """
-        Global stiffness matrix for the truss model.
+        Global stiffness matrix for the model.
 
-        :return: Global stiffness matrix for the truss model.
+        :return: Global stiffness matrix for the model.
         """
         n_dofs = self.ND * len(self.nodes)  # 3 degrees of freedom per node (x, y, z)
         K_global = np.zeros((n_dofs, n_dofs))  # quadratic, symmetric
@@ -25,7 +41,7 @@ class Model:
 
         return K_global
 
-    def apply_boundary_conditions(self, F: np.array) -> Tuple[np.array, np.array]:
+    def apply_boundary_conditions(self, F: np.array = None) -> Tuple[np.array, np.array]:
         """
         Apply boundary conditions to the global stiffness matrix and force vector.
         This method modifies the global stiffness matrix and force vector in place.
@@ -56,8 +72,10 @@ class Model:
                 # note: the value 1e20 is arbitrary, it should be large enough to avoid numerical issues - check all other
                 # values in the global stiffness matrix
                 K[global_dof, global_dof] = 1e20
-                # Set the corresponding force to zero
-                F[global_dof] = 0
+
+                # If a load vector is provided, Set the corresponding force to zero
+                if F is not None:
+                    F[global_dof] = 0
 
         return K, F
 
@@ -108,3 +126,22 @@ class Model:
         _re = self.reaction_forces(_u, _F)
 
         return _u, _re
+
+    def solve_modal(self):
+        """
+        Solve the system for the modal analysis.
+
+        :return: frequencies and modal shapes of the system.
+        """
+        M = self.assemble_lumped_M()
+        K, _ = self.apply_boundary_conditions()
+        # Solve the generalized eigenvalue problem
+        eigenvalues, eigenvectors = np.linalg.eig(np.linalg.inv(M) @ K)
+
+        # Sort eigenvalues and eigenvectors
+        idx = np.argsort(eigenvalues)
+        # Take the square root (eigenvals are omega^2) and covert to freq
+        freqs = eigenvalues[idx] ** 0.5 / (2 * np.pi)
+        shapes = eigenvectors[:, idx]
+
+        return freqs, shapes

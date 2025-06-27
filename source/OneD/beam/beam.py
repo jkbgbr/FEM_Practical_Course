@@ -127,7 +127,7 @@ class BeamElement(IDMixin):
 
     @property
     def me(self):
-        """Local mass matrix for the beam element."""
+        """Local consistent mass matrix for the beam element."""
         a = self.a
 
         me = np.zeros((4, 4))
@@ -138,6 +138,10 @@ class BeamElement(IDMixin):
         me *= self.ro * self.A * a / 105
 
         return me
+
+    @property
+    def Me(self):
+        return self.me
 
     def _distributed_load(self, q: float) -> np.ndarray:
         """
@@ -282,28 +286,33 @@ class BeamModel(Model):
             x = [element.i.x, element.j.x]
             y = [element.i.y, element.j.y]
             plt.plot(x, y, 'b-', label='Original Beam')
+            for node in self.nodes.values():
+                plt.plot(node.x, node.y, 'bo')
 
         # Plot the deformed shape
-        for element in self.elements.values():
-            xs = np.linspace(element.i.x, element.j.x, 20)
-            ys = []
-            for x in xs:
-                ksi = (x - element.i.x) / element.length * 2 - 1  # Normalize ksi to [-1, 1]
-                # Calculate the deflection at this point
-                ys.append(element.base_functions(ksi) @ u[element.dof_indices])
-            plt.plot(xs, ys, 'b--', label='Deformed Beam')
-        # Plot the nodes
-        displ = u[::2]
-        for node, _u in zip(self.nodes.values(), displ):
-            plt.plot(node.x, node.y + _u, 'ro')
+        if u is not None:
+            for element in self.elements.values():
+                xs = np.linspace(element.i.x, element.j.x, 20)
+                ys = []
+                for x in xs:
+                    ksi = (x - element.i.x) / element.length * 2 - 1  # Normalize ksi to [-1, 1]
+                    # Calculate the deflection at this point
+                    ys.append(element.base_functions(ksi) @ u[element.dof_indices])
+                plt.plot(xs, ys, 'r--', label='Deformed Beam')
+            # Plot the nodes
+            displ = u[::2]
+            for node, _u in zip(self.nodes.values(), displ):
+                plt.plot(node.x, node.y + _u, 'ro')
+
+            # adding the displacement values to the nodes
+            # for node, _u in zip(self.nodes.values(), displ):
+            #     plt.text(node.x, node.y + _u, f'{_u:.4g}', rotation=90)
+
         plt.xlabel('X (m)')
         plt.ylabel('Y (m)')
         plt.title('Beam Model: Original and Deformed Shape')
         plt.axhline(0, color='black', lw=0.5, ls='--')
         plt.axvline(0, color='black', lw=0.5, ls='--')
-        # adding the displacement values to the nodes
-        for node, _u in zip(self.nodes.values(), displ):
-            plt.text(node.x, node.y + _u, f'{_u:.4g}', rotation=90)
         plt.grid()
         # plt.axis('equal')
         plt.show()
