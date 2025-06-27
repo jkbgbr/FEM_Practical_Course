@@ -86,14 +86,9 @@ class Model:
         ND = self.ND
         for element in self.elements.values():
             # the _global_ DOF indices for this element
-            if ND == 2:
-                element._dof_indices = list([ND * element.i.ID, ND * element.i.ID + 1,
-                                              ND * element.j.ID, ND * element.j.ID + 1])
-            else:
-                element._dof_indices = list(
-                    [ND * element.i.ID, ND * element.i.ID + 1, ND * element.i.ID + 2,
-                     ND * element.j.ID, ND * element.j.ID + 1, ND * element.j.ID + 2])
-
+            _i = [ND * element.i.ID + x for x in range(ND)]  # node i DOFs
+            _j = [ND * element.j.ID + x for x in range(ND)]  # node j DOFs
+            element._dof_indices = _i + _j
         return self.elements
 
     def reaction_forces(self, u: np.array, f_external: np.array) -> np.array:

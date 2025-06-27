@@ -22,7 +22,6 @@ from source.OneD.node import Node
 from source.OneD.model import Model
 
 
-
 @dataclass
 class SpatialFrameElement(IDMixin):
 
@@ -40,13 +39,16 @@ class SpatialFrameElement(IDMixin):
     ro: float = 1.0  # Density
     nu: float = 0.3  # Poisson's ratio
 
+    _length: float = None  # Length of the truss element, can be calculated
+    _dof_indices: tuple = None  # DOF indices for the element in the model, to be set later by the model
+
     def __post_init__(self):
         super().__init__(self.__class__.__name__)  # Call the IDMixin constructor to set the ID
         if self.i.z is None or self.j.z is None:
             raise ValueError("BeamElement nodes must be in 3D.")
 
-    _length: float = None  # Length of the truss element, can be calculated
-    _dof_indices: tuple = None  # DOF indices for the element in the model, to be set later by the model
+        # setting the number of degrees of freedom for the truss element
+        self.ND = len(self.i.coords)
 
     @property
     def G(self):
@@ -69,14 +71,62 @@ class SpatialFrameElement(IDMixin):
         return self.length / 2
 
     @property
+    def direction_vector(self) -> np.array:
+        """The direction vector points from node i to node j."""
+        return self.j.coords - self.i.coords
+
+
+    @property
+    def transformation_matrix(self) -> np.array:
+        """
+        Transformation matrix for a 3D element.
+        This is a 12x12 matrix that transforms the global stuff to locals.
+
+        Usage:
+        Glob = np.array((1, 1, 1, 1, 3, 5))  # global displacements or forces
+        T = element.transformation_matrix
+        loc = T @ Glob  # in the local coordinate system
+
+        :return: Transformation matrix for the truss element.
+        """
+        e1 = self.direction_vector / self.length
+
+        # Handle the special case where the element is parallel to the global Z-axis
+        # We use a different auxiliary vector in this case.
+        if np.allclose(np.abs(e1), [0, 0, 1]):
+            # Element is vertical, use global Y-axis as auxiliary vector
+            aux_vec = np.array([0, 1, 0])
+            e3 = np.cross(e1, aux_vec)
+            e3 /= np.linalg.norm(e3)
+            e2 = np.cross(e3, e1)
+        else:
+            # Standard case, use global Z-axis as auxiliary vector
+            aux_vec = np.array([0, 0, 1])
+            e2 = np.cross(aux_vec, e1)
+            e2 /= np.linalg.norm(e2)
+            e3 = np.cross(e1, e2)
+
+        # 2. Create the 3x3 rotation matrix R
+        R = np.vstack([e1, e2, e3])
+
+        # 3. Assemble the 12x12 transformation matrix T
+        T = np.zeros((12, 12))
+        for i in range(4):
+            T[i*3:(i+1)*3, i*3:(i+1)*3] = R
+
+        return T
+
+    @property
     def ke(self):
         """Local stiffness matrix for the beam element."""
         a = self.a
-
         EA = self.A * self.E
         EIy = self.E * self.Iy
         EIz = self.E * self.Iz
         GJ = self.G * self.J
+        GJ = 3  # For testing purposes, set GJ to 1
+
+        # print(f"Element {self.ID}: Length = {self.length}, EA = {EA}, EIy = {EIy}, EIz = {EIz}, GJ = {GJ}")
 
         lila = EA / self.length
         green_1 = 3 * EIz / (2 * a ** 3)
@@ -87,27 +137,129 @@ class SpatialFrameElement(IDMixin):
 
         ke = np.zeros((12, 12))
         ke[0, :] = np.array([lila, 0, 0, 0, 0, 0,  -lila, 0, 0, 0, 0, 0])
-        ke[1, :] = np.array([0, green_1, 0, 0, 0, green_1, 0, -green_1, 0, 0, 0, green_1,])
-        ke[2, :] = np.array([0, 0, blue_1, 0, blue_1, 0, 0, 0, -blue_1, 0, -blue_1, 0])
+        ke[1, :] = np.array([0, green_1, 0, 0, 0, green_1 * a, 0, -green_1, 0, 0, 0, green_1 * a,])
+        ke[2, :] = np.array([0, 0, blue_1, 0, -blue_1 * a, 0, 0, 0, -blue_1, 0, -blue_1 * a, 0])
         ke[3, :] = np.array([0, 0, 0, gray, 0, 0, 0, 0, 0, -gray, 0, 0])
-        ke[4, :] = np.array([0, 0, blue_1, 0, blue_2, 0, 0, 0, blue_1, 0, blue_2 / 2, 0])
-        ke[5, :] = np.array([0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0])
-        ke[6, :] = np.array([0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0])
-        ke[7, :] = np.array([0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0])
-        ke[8, :] = np.array([0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0])
-        ke[9, :] = np.array([0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0])
-        ke[10, :] = np.array([0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0])
-        ke[11, :] = np.array([0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0])
+        ke[4, :] = np.array([0, 0, 0, 0, blue_2, 0, 0, 0, blue_1 * a, 0, blue_2, 0])
+        ke[5, :] = np.array([0, 0, 0, 0, 0, green_2, 0, -green_1 * a, 0, 0, 0, green_2 / 2])
+        ke[6, :] = np.array([0, 0, 0, 0, 0, 0, lila, 0, 0, 0, 0, 0])
+        ke[7, :] = np.array([0, 0, 0, 0, 0, 0, 0, green_1, 0, 0, 0, -green_1 * a])
+        ke[8, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, blue_1, 0, blue_1 * a, 0])
+        ke[9, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, gray, 0, 0])
+        ke[10, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, blue_2, 0])
+        ke[11, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, green_2])
+
+        # making it symmetric
+        ke = ke + ke.T - np.diag(np.diag(ke))
+
+        # for i in range(12):
+        #     print(f"ke[{i}, :] = {ke[i, :]}")  # Debugging output to check the local stiffness matrix
+
 
         return ke
 
     @property
     def Ke(self):
+        """ Global stiffness matrix for the truss element."""
         return self.ke
+        # _T = self.transformation_matrix
+        # return _T.T @ self.ke @ _T
+
+
+@dataclass
+class SpatialFrameModel(Model):
+    """
+    A model for a spatial frame structure consisting of multiple beam elements.
+    This class can be used to assemble the global stiffness matrix and load vector for the entire beam structure.
+    """
+
+    nodes_: Tuple[Node, ...] = None  # Nodes in the truss model
+    elements_: Tuple[Tuple[
+        int, int, float, float, float, float, float, float, float], ...] = None  # A nested tuple. # Elements in the truss model, each defined by (node_i_id, node_j_id, A, E, ro)
+    supports_: Dict[int, Tuple[int, ...]] = None  # Supports. Node ID: local dof numbers e.g. {0: (0, 1, 2)}
+
+    # not checkd if all elements have the same number of DOF per node, but it is assumed that they do.
+    ND: int = 6  # Number of DOF per node
+
+    def __post_init__(self):
+        # Convert nodes and elements to dictionaries for easy access
+        # This allows for quick lookups by node ID and element ID
+        self.nodes = {node.ID: node for node in self.nodes_}  # Convert nodes to a dictionary for easy access
+        elements_ = tuple(
+            SpatialFrameElement(i=self.nodes[x[0]], j=self.nodes[x[1]], A=x[2], Iy=x[3], Iz=x[4], J=x[5], E=x[6], ro=x[7], nu=x[8]) for x in self.elements_)
+        self.elements = {x.ID: x for x in elements_}  # Convert elements to a dictionary for easy access
+        self.supports = self.supports_ if self.supports_ is not None else tuple()  # Supports, a tuple of (node_id, direction)
+
+        # set the DOF indices for each element
+        self.elements = self.set_element_dof_indices()
+
+    def plot_frame(self, u: np.array = None, disp_factor: float = None):
+        """
+        Plot the structure with optional displacements.
+
+        :param u: Global displacement vector. If provided, the truss will be plotted with displacements.
+        """
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+
+        ax = fig.add_subplot(111, projection='3d')
+
+        for element in self.elements.values():
+            x = [element.i.coords[0], element.j.coords[0]]
+            y = [element.i.coords[1], element.j.coords[1]]
+            z = [element.i.coords[2], element.j.coords[2]]
+            ax.plot(x, y, z, 'ko-')
+
+            if u is not None:
+
+                if disp_factor is None:
+                    disp_factor = (max(x.length for x in self.elements.values()) / 10) / max(
+                        abs(x) for x in u)  # Default factor based on the longest element
+
+                # Apply displacements to the nodes
+                x_ = np.array([u[element.dof_indices[0]], u[element.dof_indices[self.ND + 0]]])
+                y_ = np.array([u[element.dof_indices[1]], u[element.dof_indices[self.ND + 1]]])
+                z_ = np.array([u[element.dof_indices[2]], u[element.dof_indices[self.ND + 2]]])
+
+                x_ = x_ * disp_factor
+                y_ = y_ * disp_factor
+                z_ = z_ * disp_factor
+
+                x_ = x_[0] + element.i.coords[0], x_[1] + element.j.coords[0]
+                y_ = y_[0] + element.i.coords[1], y_[1] + element.j.coords[1]
+                z_ = z_[0] + element.i.coords[2], z_[1] + element.j.coords[2]
+                ax.plot(x_, y_, z_, 'ro-')
+
+        plt.show()
+
+
+
+if __name__ == '__main__':  # pragma: no cover
+
+    n1 = Node(1, 1, 0)
+    n2 = Node(-1, 1, 0)
+    n3 = Node(-1, -1, 0)
+    n4 = Node(1, -1, 0)
+    n5 = Node(0, 0, 1)
+    
+    model = SpatialFrameModel(
+        nodes_=(n1, n2, n3, n4, n5),
+        elements_=(
+            (n1.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
+            (n2.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
+            (n3.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
+            (n4.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
+        ),
+        supports_={
+            n1.ID: (0, 1, 2, 3, 4, 5),
+            n2.ID: (0, 1, 2, ),
+            n3.ID: (0, 1, 2, ),
+            n4.ID: (0, 1, 2, ),
+        }
+    )
+
+    _F = np.zeros(model.ND * len(model.nodes))  # No external forces
+    _F[model.elements[0].dof_indices[-5]] = -1000  # Apply a load of -1000 N at node 5 in the -Z direction
+    u, r = model.solve(_F)
+    print(r.reshape(5, 6))
+    model.plot_frame(u)
