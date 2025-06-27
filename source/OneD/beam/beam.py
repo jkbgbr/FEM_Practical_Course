@@ -1,6 +1,5 @@
 """
-The 2D beam element from Chapter 5,
-worked example 5.4
+The 2D beam element from Chapter 5
 
 There is an error in the 2nd edition (Elsevier, 2014)
 in (5.14) correctly: N3 = 1/4 * (2 + 3 * ksi - ksi**3)
@@ -18,7 +17,7 @@ from typing import Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from source.OneD.utils import IDMixin# , assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
+from source.OneD.utils import IDMixin
 from source.OneD.node import Node
 from source.OneD.model import Model
 
