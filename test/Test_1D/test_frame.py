@@ -111,15 +111,23 @@ class TestSpatialFrameModelModal(unittest.TestCase):
 
         self.model2 = SpatialFrameModel(
             nodes_=nodes,
-            elements_=tuple((x.ID, y.ID, 1, 1, 1, 1, 1, 1, 0.3) for x, y in zip(nodes, nodes[1:])),
+            elements_=tuple((x.ID, y.ID, 1, 1, 1.1, 1, 1, 1, 0.3) for x, y in zip(nodes, nodes[1:])),
             supports_={nodes[0].ID: (0, 1, 2, 3, 4, 5), }
         )
 
+        E = Iy = ro = A = 1
+        L = 20
+
+        f1 = 1.875 ** 2 * np.sqrt(E * Iy / (ro * A * L ** 4)) / (2 * np.pi)  # first natural frequency [Hz]
+        print(f1)
+
     def test_modal(self):
-        freqs1, shapes1 = self.model1.solve_modal()
-        print(freqs1)
+        # freqs1, shapes1 = self.model1.solve_modal()
+        # print(freqs1)
         freqs2, shapes2 = self.model2.solve_modal()
         print(freqs2)
+        for i in range(10):
+            self.model2.plot_frame(shapes2[:, i])
 
 
 

@@ -157,29 +157,32 @@ class SpatialFrameElement(IDMixin):
     @property
     def me(self):
         """Local mass matrix for the beam element."""
-        a = self.a
-        rx2 = self.J / self.A  # rx^2 is the radius of gyration squared
+
+        L = self.length
+        rx = self.J / self.A
 
         me = np.zeros((12, 12))
-        me[0, :] = np.array([70, 0, 0, 0, 0, 0, 35, 0, 0, 0, 0, 0])
-        me[1, :] = np.array([0, 78, 0, 0, 0, 22 * a, 0, 27, 0, 0, 0, -13 * a,])
-        me[2, :] = np.array([0, 0, 78, 0, -22 * a, 0, 0, 0, 27, 0, 13 * a, 0])
-        me[3, :] = np.array([0, 0, 0, 70 * rx2, 0, 0, 0, 0, 0, -35 * rx2, 0, 0])
-        me[4, :] = np.array([0, 0, 0, 0, 8 * a ** 2, 0, 0, 0, -13 * a, 0, -6 * a ** 2, 0])
-        me[5, :] = np.array([0, 0, 0, 0, 0, 8 * a ** 2, 0, 13 * a, 0, 0, 0, -6 * a ** 2])
-        me[6, :] = np.array([0, 0, 0, 0, 0, 0, 70, 0, 0, 0, 0, 0])
-        me[7, :] = np.array([0, 0, 0, 0, 0, 0, 0, 78, 0, 0, 0, -22 * a])
-        me[8, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 78, 0, 22 * a, 0])
-        me[9, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 70 * rx2, 0, 0])
-        me[10, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8 * a ** 2, 0])
-        me[11, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8 * a ** 2])
+        me[0, :] = np.array([1/3, 0, 0, 0, 0, 0, 1/6, 0, 0, 0, 0, 0])
+        me[1, :] = np.array([0, 156/420, 0, 0, 0, 22 * L / 420, 0, 54 / 420, 0, 0, 0, -13 * L / 420,])
+        me[2, :] = np.array([0, 0, 156/420, 0, -22 * L / 420, 0, 0, 0, 54 / 420, 0, 13 * L / 420, 0])
+        me[3, :] = np.array([0, 0, 0, rx / 3, 0, 0, 0, 0, 0, rx / 6, 0, 0])
+        me[4, :] = np.array([0, 0, 0, 0, 4 * L ** 2 / 420, 0, 0, 0, -13 * L / 420, 0, -3 * L ** 2 / 420, 0])
+        me[5, :] = np.array([0, 0, 0, 0, 0, 4 * L ** 2 / 420, 0, 13 * L / 420, 0, 0, 0, -3 * L ** 2 / 420])
+        me[6, :] = np.array([0, 0, 0, 0, 0, 0, 1/3, 0, 0, 0, 0, 0])
+        me[7, :] = np.array([0, 0, 0, 0, 0, 0, 0, 156 / 420, 0, 0, 0, -22 * L / 420])
+        me[8, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 156 / 420, 0, 22 * L, 0])
+        me[9, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, rx / 3, 0, 0])
+        me[10, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 * L ** 2 / 420, 0])
+        me[11, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 * L ** 2 / 420])
 
-        me *= self.ro * self.A * a / 105
+        me *= self.ro * self.A * L
+
 
         # making it symmetric
         me = me + me.T - np.diag(np.diag(me))
 
         return me
+
 
     @property
     def Ke(self):
