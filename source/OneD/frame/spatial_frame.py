@@ -119,7 +119,7 @@ class SpatialFrameElement(IDMixin):
     @property
     def ke(self):
         """Local stiffness matrix for the beam element."""
-        a = self.a
+        L = 2 * self.a
         EA = self.A * self.E
         EIy = self.E * self.Iy
         EIz = self.E * self.Iz
@@ -128,42 +128,42 @@ class SpatialFrameElement(IDMixin):
 
         # print(f"Element {self.ID}: Length = {self.length}, EA = {EA}, EIy = {EIy}, EIz = {EIz}, GJ = {GJ}")
 
-        lila = EA / self.length
-        green_1 = 3 * EIz / (2 * a ** 3)
-        green_2 = 2 * EIz / a
-        blue_1 = 3 * EIy / (2 * a ** 3)
-        blue_2 = 2 * EIy / a
-        gray = GJ / (2 * a)
+        lila = EA / L
+        green_1 = 12 * EIz / L ** 3
+        green_2 = 6 * EIz / L ** 2
+        green_3 = 4 * EIz / L
+        green_4 = 2 * EIz / L
+        blue_1 = 12 * EIy / L ** 3
+        blue_2 = 6 * EIy / L ** 2
+        blue_3 = 4 * EIy / L
+        blue_4 = 2 * EIy / L
+        gray = GJ / L
 
         ke = np.zeros((12, 12))
-        ke[0, :] = np.array([lila, 0, 0, 0, 0, 0,  -lila, 0, 0, 0, 0, 0])
-        ke[1, :] = np.array([0, green_1, 0, 0, 0, green_1 * a, 0, -green_1, 0, 0, 0, green_1 * a,])
-        ke[2, :] = np.array([0, 0, blue_1, 0, -blue_1 * a, 0, 0, 0, -blue_1, 0, -blue_1 * a, 0])
+        ke[0, :] = np.array([lila, 0, 0, 0, 0, 0, -lila, 0, 0, 0, 0, 0])
+        ke[1, :] = np.array([0, green_1, 0, 0, 0, green_2, 0, -green_1, 0, 0, 0, green_2,])
+        ke[2, :] = np.array([0, 0, blue_1, 0, -blue_2, 0, 0, 0, -blue_1, 0, -blue_2, 0])
         ke[3, :] = np.array([0, 0, 0, gray, 0, 0, 0, 0, 0, -gray, 0, 0])
-        ke[4, :] = np.array([0, 0, 0, 0, blue_2, 0, 0, 0, blue_1 * a, 0, blue_2, 0])
-        ke[5, :] = np.array([0, 0, 0, 0, 0, green_2, 0, -green_1 * a, 0, 0, 0, green_2 / 2])
+        ke[4, :] = np.array([0, 0, 0, 0, blue_3, 0, 0, 0, blue_2, 0, blue_4, 0])
+        ke[5, :] = np.array([0, 0, 0, 0, 0, green_3, 0, -green_2, 0, 0, 0, green_4])
         ke[6, :] = np.array([0, 0, 0, 0, 0, 0, lila, 0, 0, 0, 0, 0])
-        ke[7, :] = np.array([0, 0, 0, 0, 0, 0, 0, green_1, 0, 0, 0, -green_1 * a])
-        ke[8, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, blue_1, 0, blue_1 * a, 0])
+        ke[7, :] = np.array([0, 0, 0, 0, 0, 0, 0, green_1, 0, 0, 0, -green_2])
+        ke[8, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, blue_1, 0, blue_2, 0])
         ke[9, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, gray, 0, 0])
-        ke[10, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, blue_2, 0])
-        ke[11, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, green_2])
+        ke[10, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, blue_3, 0])
+        ke[11, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, green_3])
 
         # making it symmetric
         ke = ke + ke.T - np.diag(np.diag(ke))
-
-        # for i in range(12):
-        #     print(f"ke[{i}, :] = {ke[i, :]}")  # Debugging output to check the local stiffness matrix
-
 
         return ke
 
     @property
     def Ke(self):
-        """ Global stiffness matrix for the truss element."""
-        return self.ke
-        # _T = self.transformation_matrix
-        # return _T.T @ self.ke @ _T
+        """ Global stiffness matrix."""
+        # return self.ke
+        _T = self.transformation_matrix
+        return _T.T @ self.ke @ _T
 
 
 @dataclass
@@ -251,7 +251,7 @@ if __name__ == '__main__':  # pragma: no cover
             (n4.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
         ),
         supports_={
-            n1.ID: (0, 1, 2, 3, 4, 5),
+            n1.ID: (0, 1, 2, ),
             n2.ID: (0, 1, 2, ),
             n3.ID: (0, 1, 2, ),
             n4.ID: (0, 1, 2, ),
@@ -259,7 +259,7 @@ if __name__ == '__main__':  # pragma: no cover
     )
 
     _F = np.zeros(model.ND * len(model.nodes))  # No external forces
-    _F[model.elements[0].dof_indices[-5]] = -1000  # Apply a load of -1000 N at node 5 in the -Z direction
+    _F[model.elements[0].dof_indices[-4]] = -1000  # Apply a load of -1000 N at node 5 in the -Z direction
     u, r = model.solve(_F)
     print(r.reshape(5, 6))
     model.plot_frame(u)

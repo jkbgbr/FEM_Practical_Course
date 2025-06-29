@@ -26,7 +26,7 @@ class TestSpatialFrameModel(unittest.TestCase):
 
     def setUp(self):
         n1 = Node(0, 0, 0)
-        n2 = Node(1, 0, 0)
+        n2 = Node(-2, 0, 0)
         self.model = SpatialFrameModel(
             nodes_=(n1, n2),
             elements_=(
