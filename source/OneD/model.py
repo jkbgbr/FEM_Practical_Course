@@ -1,6 +1,7 @@
 
 import numpy as np
 from typing import Tuple
+from source.OneD.utils import IDMixin
 
 
 class Model:

@@ -75,7 +75,6 @@ class SpatialFrameElement(IDMixin):
         """The direction vector points from node i to node j."""
         return self.j.coords - self.i.coords
 
-
     @property
     def transformation_matrix(self) -> np.array:
         """
@@ -124,9 +123,6 @@ class SpatialFrameElement(IDMixin):
         EIy = self.E * self.Iy
         EIz = self.E * self.Iz
         GJ = self.G * self.J
-        GJ = 3  # For testing purposes, set GJ to 1
-
-        # print(f"Element {self.ID}: Length = {self.length}, EA = {EA}, EIy = {EIy}, EIz = {EIz}, GJ = {GJ}")
 
         lila = EA / L
         green_1 = 12 * EIz / L ** 3
@@ -159,11 +155,56 @@ class SpatialFrameElement(IDMixin):
         return ke
 
     @property
+    def me(self):
+        """Local mass matrix for the beam element."""
+        a = self.a
+        rx2 = self.J / self.A  # rx^2 is the radius of gyration squared
+
+        me = np.zeros((12, 12))
+        me[0, :] = np.array([70, 0, 0, 0, 0, 0, 35, 0, 0, 0, 0, 0])
+        me[1, :] = np.array([0, 78, 0, 0, 0, 22 * a, 0, 27, 0, 0, 0, -13 * a,])
+        me[2, :] = np.array([0, 0, 78, 0, -22 * a, 0, 0, 0, 27, 0, 13 * a, 0])
+        me[3, :] = np.array([0, 0, 0, 70 * rx2, 0, 0, 0, 0, 0, -35 * rx2, 0, 0])
+        me[4, :] = np.array([0, 0, 0, 0, 8 * a ** 2, 0, 0, 0, -13 * a, 0, -6 * a ** 2, 0])
+        me[5, :] = np.array([0, 0, 0, 0, 0, 8 * a ** 2, 0, 13 * a, 0, 0, 0, -6 * a ** 2])
+        me[6, :] = np.array([0, 0, 0, 0, 0, 0, 70, 0, 0, 0, 0, 0])
+        me[7, :] = np.array([0, 0, 0, 0, 0, 0, 0, 78, 0, 0, 0, -22 * a])
+        me[8, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 78, 0, 22 * a, 0])
+        me[9, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 70 * rx2, 0, 0])
+        me[10, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8 * a ** 2, 0])
+        me[11, :] = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8 * a ** 2])
+
+        me *= self.ro * self.A * a / 105
+
+        # making it symmetric
+        me = me + me.T - np.diag(np.diag(me))
+
+        return me
+
+    @property
     def Ke(self):
         """ Global stiffness matrix."""
-        # return self.ke
+        return self.lokal_to_global(self.ke)
+
+    @property
+    def Me(self):
+        """ Global mass matrix."""
+        return self.lokal_to_global(self.me)
+
+    def lokal_to_global(self, array: np.array):
+        """
+        Convert a local array to a global array using the transformation matrix.
+
+        :param array: Local array (e.g., displacements or forces).
+        :return: Global array.
+        """
         _T = self.transformation_matrix
-        return _T.T @ self.ke @ _T
+        if array.ndim == 1:
+            return _T.T @ array
+        elif array.ndim == 2:
+            return _T.T @ array @ _T
+        else:
+            raise ValueError("Array must be 1D or 2D.")
 
 
 @dataclass
@@ -261,5 +302,4 @@ if __name__ == '__main__':  # pragma: no cover
     _F = np.zeros(model.ND * len(model.nodes))  # No external forces
     _F[model.elements[0].dof_indices[-4]] = -1000  # Apply a load of -1000 N at node 5 in the -Z direction
     u, r = model.solve(_F)
-    print(r.reshape(5, 6))
     model.plot_frame(u)
