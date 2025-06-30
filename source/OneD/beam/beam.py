@@ -145,6 +145,7 @@ class BeamElement(IDMixin):
     def _distributed_load(self, q: float) -> np.ndarray:
         """
         Calculates the load vector for a uniformly distributed load acting in the y direction on the beam element.
+        Note: this element type performs really poor when non-nodal loads are applied!
 
         :param q: load intensity (force per unit length).
         :return: Load vector (4x1).

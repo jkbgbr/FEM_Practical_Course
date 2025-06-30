@@ -10,7 +10,7 @@ The formulation results correct displacements, but the internal actions are poor
 This is a simple linear beam element, not accounting for shear deformation.
 
 """
-
+import pprint
 from dataclasses import dataclass
 from typing import Tuple, Dict
 
@@ -48,7 +48,7 @@ class SpatialFrameElement(IDMixin):
             raise ValueError("BeamElement nodes must be in 3D.")
 
         # setting the number of degrees of freedom for the truss element
-        self.ND = len(self.i.coords)
+        self.ND = 6
 
     @property
     def G(self):
@@ -235,6 +235,31 @@ class SpatialFrameModel(Model):
         # set the DOF indices for each element
         self.elements = self.set_element_dof_indices()
 
+    def member_forces(self, u: np.array) -> np.array:
+        """
+        Calculate the member internal actions in the elements.
+
+        :param u: Global displacement vector.
+        :return: Internal actions in a dict.
+        """
+        forces = {}
+
+        # Iterate over each element and calculate the member force
+        for i, element in self.elements.items():
+            Du = u[element.dof_indices]  # global displacements of the nodes in the element
+            _T = element.transformation_matrix
+            # Transform the global displacements to local displacements
+            du = _T @ Du
+            # Calculate the member force using the local stiffness matrix.
+            nodal_forces = element.ke @ du  # Global stiffness matrix times the displacements
+
+            res = {element.i.ID: nodal_forces[:element.ND],
+                   element.j.ID: nodal_forces[element.ND:]}
+
+            forces[i] = res  # Store the force at node i (the second node in the element)
+
+        return forces
+
     def plot_frame(self, u: np.array = None, disp_factor: float = None):
         """
         Plot the structure with optional displacements.
@@ -275,7 +300,6 @@ class SpatialFrameModel(Model):
         plt.show()
 
 
-
 if __name__ == '__main__':  # pragma: no cover
 
     n1 = Node(1, 1, 0)
@@ -287,10 +311,10 @@ if __name__ == '__main__':  # pragma: no cover
     model = SpatialFrameModel(
         nodes_=(n1, n2, n3, n4, n5),
         elements_=(
-            (n1.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
-            (n2.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
-            (n3.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
-            (n4.ID, n5.ID, 1, 1, 2, 5, 2, 1, 0.3),
+            (n1.ID, n5.ID, 1, 1, 1, 1, 1, 1, 0.3),
+            (n2.ID, n5.ID, 1, 1, 1, 1, 1, 1, 0.3),
+            (n3.ID, n5.ID, 1, 1, 1, 1, 1, 1, 0.3),
+            (n4.ID, n5.ID, 1, 1, 1, 1, 1, 1, 0.3),
         ),
         supports_={
             n1.ID: (0, 1, 2, ),
@@ -301,6 +325,13 @@ if __name__ == '__main__':  # pragma: no cover
     )
 
     _F = np.zeros(model.ND * len(model.nodes))  # No external forces
+    _F[model.elements[0].dof_indices[-6]] = 400  # Apply a load of -1000 N at node 5 in the -Z direction
     _F[model.elements[0].dof_indices[-4]] = -1000  # Apply a load of -1000 N at node 5 in the -Z direction
     u, r = model.solve(_F)
+
+    print(u)
+
+    pprint.pprint(model.member_forces(u))
+
+    exit()
     model.plot_frame(u)

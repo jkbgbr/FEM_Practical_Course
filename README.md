@@ -2,6 +2,12 @@
 
 This project aims to implement worked examples from the book "The Finite Element Method: A Practical Course" by G.R. Liu and S.S. Quek. It serves as a practical exercise in understanding and applying the finite element method (FEM) to structural mechanics problems using python.
 
+Note that the package is:
+- by no means coplete. 
+- it is largely bug-free, but not optimized for speed or memory usage.
+- aimed at educational purposes, not production use.
+
+
 ## Project Structure
 
 The project is organized into sections based on dimensionality and element type:
@@ -20,7 +26,7 @@ The modules are tested, though not with the aim to achieve 100% coverage.
 
 Elements are implemented as listed:
 - **Trusses**: Displacements, member forces, support reactions.
-- **Beams and frames**: Displacements, support reactions, modal analysis. As the elements perform very poor in finding the internal actions, this is not implemented.
+- **Beams and frames**: Displacements, support reactions, modal analysis.
 
 Check out the notebooks in the `notebooks/` directory for examples of how to use the classes.
 
@@ -30,4 +36,3 @@ To avoid code repetition and get python out of the way certain aspects are imple
 - Support definition is done by defining a list of nodes and their _local_ degrees of freedom (DOFs) that are constrained.
 - This makes model definition unified across different element types.
 - Node and element IDs are given away automatically. If multiple models are created within the same session, first ``IDMixin.reset()`` is to be called.
-- 
