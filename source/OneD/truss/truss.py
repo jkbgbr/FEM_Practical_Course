@@ -173,28 +173,6 @@ class TrussElement(IDMixin):
         """
         return self._body_load(fx) + self._nodal_load(F)
 
-    # @property
-    # def transformation_matrix(self) -> np.array:
-    #     """
-    #     Transformation matrix for the truss element.
-    #     This is a 2x6 matrix that transforms the global displacements or forces to locals.
-    #
-    #     Usage:
-    #     Glob = np.array((1, 1, 1, 1, 3, 5))  # global displacements or forces
-    #     T = element.transformation_matrix
-    #     loc = T @ Glob  # in the local coordinate system
-    #
-    #     :return: Transformation matrix for the truss element.
-    #     """
-    #     unit_vector = self.direction_vector / self.length
-    #
-    #     # transformation matrix as in (4.20) in the book
-    #     _T = np.zeros((2, 2 * self.ND))
-    #     _T[0, 0:self.ND] = unit_vector
-    #     _T[1, self.ND:2 * self.ND] = unit_vector
-    #
-    #     return _T
-
 
 @dataclass
 class TrussModel(Model):

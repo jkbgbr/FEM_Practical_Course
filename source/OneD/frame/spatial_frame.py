@@ -177,12 +177,10 @@ class SpatialFrameElement(IDMixin):
 
         me *= self.ro * self.A * L
 
-
         # making it symmetric
         me = me + me.T - np.diag(np.diag(me))
 
         return me
-
 
     @property
     def Ke(self):
