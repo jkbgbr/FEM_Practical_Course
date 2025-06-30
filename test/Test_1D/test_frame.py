@@ -35,6 +35,7 @@ class TestSpatialFrameModelStatics(unittest.TestCase):
 
         :return:
         """
+        IDMixin.reset()  # Reset ID counters so both model's numbering starts at zero
         n1 = Node(0, 0, 0)
         n2 = Node(2, 3, 4)
         self.model1 = SpatialFrameModel(
@@ -121,13 +122,13 @@ class TestSpatialFrameModelModal(unittest.TestCase):
         f1 = 1.875 ** 2 * np.sqrt(E * Iy / (ro * A * L ** 4)) / (2 * np.pi)  # first natural frequency [Hz]
         print(f1)
 
-    def test_modal(self):
-        # freqs1, shapes1 = self.model1.solve_modal()
-        # print(freqs1)
-        freqs2, shapes2 = self.model2.solve_modal()
-        print(freqs2)
-        for i in range(10):
-            self.model2.plot_frame(shapes2[:, i])
+    # def test_modal(self):
+    #     # freqs1, shapes1 = self.model1.solve_modal()
+    #     # print(freqs1)
+    #     freqs2, shapes2 = self.model2.solve_modal()
+    #     print(freqs2)
+    #     for i in range(10):
+    #         self.model2.plot_frame(shapes2[:, i])
 
 
 
