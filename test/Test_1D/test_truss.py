@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 
-from source.OneD.node import Node
+from source.node import Node
 from source.OneD.truss.truss import TrussElement, TrussModel
-from source.OneD.utils import IDMixin
+from source.utils import IDMixin
 
 
 class TestTruss(unittest.TestCase):

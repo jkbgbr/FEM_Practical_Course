@@ -17,8 +17,8 @@ from typing import Tuple, Dict
 import numpy as np
 import matplotlib.pyplot as plt
 
-from source.OneD.utils import IDMixin
-from source.OneD.node import Node
+from source.utils import IDMixin
+from source.node import Node
 from source.OneD.model import Model
 
 

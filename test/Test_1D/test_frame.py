@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 
-from source.OneD.node import Node
+from source.node import Node
 from source.OneD.frame.spatial_frame import SpatialFrameElement, SpatialFrameModel
-from source.OneD.utils import IDMixin
+from source.utils import IDMixin
 
 
 

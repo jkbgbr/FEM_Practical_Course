@@ -1,6 +1,6 @@
 import numpy as np
 
-from source.OneD.node import Node
+from source.node import Node
 from source.OneD.truss.truss import TrussModel
 
 

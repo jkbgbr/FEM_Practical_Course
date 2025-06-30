@@ -3,8 +3,8 @@ from typing import Tuple, Dict
 
 import numpy as np
 
-from source.OneD.utils import IDMixin
-from source.OneD.node import Node
+from source.utils import IDMixin
+from source.node import Node
 from source.OneD.model import Model
 # from source.utils import assemble_global_K, apply_boundary_conditions, set_element_dof_indices, reaction_forces
 
