@@ -1,29 +1,33 @@
 # Finite Element Method Implementation
 
-This project aims to implement worked examples from the book "The Finite Element Method: A Practical Course" by G.R. Liu and S.S. Quek. It serves as a practical exercise in understanding and applying the finite element method (FEM) to structural mechanics problems.
+This project aims to implement worked examples from the book "The Finite Element Method: A Practical Course" by G.R. Liu and S.S. Quek. It serves as a practical exercise in understanding and applying the finite element method (FEM) to structural mechanics problems using python.
 
 ## Project Structure
 
-The project is organized into sections based on different types of structural elements:
+The project is organized into sections based on dimensionality and element type:
 
--   **Trusses**: Implementation of truss elements. (WIP)
--   **Beams**: Implementation of beam element analysis. (Planned)
--   **Frames**: Implementation of frame element analysis. (Planned)
--   **Plates/Shells**: Implementation of plate and shell element analysis. (Planned)
+**1D:** 
+-   **Trusses**: Implementation of plane and spatial truss, static analysis.
+-   **Beams**: Implementation of the Euler-Bernoulli 2D beam element, static and modal analysis.
+-   **Frames**: Implementation of the spatial Euler-Bernoulli frame element, static and modal analysis.
+   
+**2D:**
+- **Plates/Shells**: Implementation of plate and shell element analysis. (Planned)
 
-## Current Status
+The modules are tested, though not with the aim to achieve 100% coverage.
 
-Currently, the **Trusses** section is a work in progress.
+## Current Status, 1D Elements
 
-### Truss Implementation Details
+Elements are implemented as listed:
+- **Trusses**: Displacements, member forces, support reactions.
+- **Beams and frames**: Displacements, support reactions, modal analysis. As the elements perform very poor in finding the internal actions, this is not implemented.
 
-The truss implementation includes the following features:
+Check out the notebooks in the `notebooks/` directory for examples of how to use the classes.
 
--   Node and element classes for defining truss structures.
--   Calculation of element stiffness matrices.
--   Assembly of the global stiffness matrix.
--   Application of boundary conditions (supports).
--   Solution for nodal displacements.
--   Calculation of member forces (tension/compression).
--   Calculation of reaction forces at supports.
--   Tests with single- and multi-element examples.
+To avoid code repetition and get python out of the way certain aspects are implemented in a generic way which also shows which steps of the finite element procedure are common to all elements:
+- A Model class is used to hold the nodes, elements, and boundary conditions, solve the problems etc.
+- A Node class is used to hold the node coordinates.
+- Support definition is done by defining a list of nodes and their _local_ degrees of freedom (DOFs) that are constrained.
+- This makes model definition unified across different element types.
+- Node and element IDs are given away automatically. If multiple models are created within the same session, first ``IDMixin.reset()`` is to be called.
+- 
