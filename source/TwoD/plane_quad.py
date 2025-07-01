@@ -91,7 +91,7 @@ class RM2DPlate(IDMixin):
 
     def B(self, xi: float, eta: float) -> np.array:
         """The strain matrix, composed of the partial derivatives of the shape functions"""
-        _ret = np.zeros([self.ND])
+        _ret = np.zeros([self.ND, self.ND])
 
 
 @dataclass
