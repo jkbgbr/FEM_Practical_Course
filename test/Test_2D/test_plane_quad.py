@@ -4,7 +4,7 @@ import random
 import numpy as np
 
 from source.node import Node
-from source.TwoD.plane_quad import RM2DPlate, PlaneQuadModel
+from source.TwoD.PlaneQuad.plane_quad import PlaneQuadModel
 
 
 class TestRM2DPlate(unittest.TestCase):
