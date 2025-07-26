@@ -49,3 +49,238 @@ Hier sind die Schritte, die Sie unternehmen werden, und die bestätigen, dass Ih
 5.  **Integrieren Sie über das Elternelement:** Die Berechnung der Steifigkeitsmatrix `K` wird zu einem Integral über `ξ` und `η` von 0 bis 1, wobei das Flächenelement `dr dz` durch `det(J) dξ dη` ersetzt wird.
 
 Der Prozess ist standardisiert und sehr leistungsfähig. Die "Schwierigkeit" liegt in der korrekten Handhabung der Matrixalgebra, aber die zugrunde liegenden Konzepte sind genau so geradlinig, wie Sie es sich vorgestellt haben.
+
+
+Of course. Here is the derivation for the `B_i` matrix block for a single node `i` in an isoparametric axisymmetric formulation.
+
+The strain-displacement relationship in axisymmetric coordinates is given by:
+
+$$
+{\epsilon} =
+\begin{Bmatrix}
+\epsilon_r \\
+\epsilon_z \\
+\gamma_{rz} \\
+\epsilon_\theta
+\end{Bmatrix}
+=
+\begin{Bmatrix}
+\frac{\partial u}{\partial r} \\
+\frac{\partial w}{\partial z} \\
+\frac{\partial u}{\partial z} + \frac{\partial w}{\partial r} \\
+\frac{u}{r}
+\end{Bmatrix}
+$$
+
+In the isoparametric formulation, the displacements `u` and `w` are interpolated from the nodal displacements `u_i` and `w_i` using the shape functions `N_i(\xi, \eta)`:
+
+$$
+u(\xi, \eta) = \sum_{i=1}^{3} N_i(\xi, \eta) u_i \quad \quad w(\xi, \eta) = \sum_{i=1}^{3} N_i(\xi, \eta) w_i
+$$
+
+The strain vector `ε` can be related to the nodal displacement vector `d` through the `B` matrix: `ε = B d`. The `B` matrix is composed of blocks `B_i` for each node: `B = [B_1, B_2, B_3]`.
+
+The block `B_i` for node `i` connects the strains to the displacements `u_i` and `w_i`. By substituting the interpolation for `u` and `w` into the strain definitions, we get the structure of `B_i`:
+
+$$
+\mathbf{B}_i =
+\begin{bmatrix}
+\frac{\partial N_i}{\partial r} & 0 \\
+0 & \frac{\partial N_i}{\partial z} \\
+\frac{\partial N_i}{\partial z} & \frac{\partial N_i}{\partial r} \\
+\frac{N_i}{r} & 0
+\end{bmatrix}
+$$
+
+The core of the isoparametric method is to find the global derivatives (`∂/∂r`, `∂/∂z`) from the natural derivatives (`∂/∂ξ`, `∂/∂η`) using the chain rule and the inverse of the Jacobian matrix `J`:
+
+$$
+\begin{Bmatrix}
+\frac{\partial N_i}{\partial r} \\
+\frac{\partial N_i}{\partial z}
+\end{Bmatrix}
+=
+\mathbf{J}^{-1}
+\begin{Bmatrix}
+\frac{\partial N_i}{\partial \xi} \\
+\frac{\partial N_i}{\partial \eta}
+\end{Bmatrix}
+$$
+
+The Jacobian matrix J relates the derivatives in the global coordinate system (r, z) to the derivatives in the natural coordinate system (ξ, η).
+
+It is defined as:
+
+$$\mathbf{J} = \begin{bmatrix} \frac{\partial r}{\partial \xi} & \frac{\partial z}{\partial \xi} \\ \frac{\partial r}{\partial \eta} & \frac{\partial z}{\partial \eta} \end{bmatrix}$$
+
+Using the isoparametric mapping $$ r = \sum N_i r_i $$ and $$ z = \sum N_i z_i$$ for a 3-node linear triangle, we can compute the specific terms. For example, $$\frac{\partial r}{\partial \xi} = \sum \frac{\partial N_i}{\partial \xi} r_i$$.
+
+Since the derivatives of the linear shape functions $$(\frac{\partial N_i}{\partial \xi}, \frac{\partial N_i}{\partial \eta})$$ are constants, the resulting Jacobian matrix is also constant for the element. Its components are:
+
+$$\mathbf{J} = \begin{bmatrix} r_2 - r_1 & z_2 - z_1 \\ r_3 - r_1 & z_3 - z_1 \end{bmatrix}$$
+
+where $(r_1, z_1)$, $(r_2, z_2)$, and $(r_3, z_3)$ are the global coordinates of the three element nodes.
+
+The derivatives of the shape functions with respect to the natural coordinates (`∂N_i/∂ξ`, `∂N_i/∂η`) are simple constants. The Jacobian `J` is also constant for a linear triangle.
+
+The final key point is that the radius `r` in the fourth row (`N_i/r`) is not a constant. It must also be interpolated from the nodal coordinates at the specific Gauss point being evaluated:
+
+$$
+r = \sum_{j=1}^{3} N_j(\xi, \eta) r_j
+$$
+
+This `r` in the denominator is why the `B` matrix is not constant across the element and why numerical integration (Gaussian quadrature) is necessary.
+
+
+
+You are correct to be cautious, as there are two common conventions for defining the Jacobian matrix, one being the transpose of the other. Both are valid, as long as they are used consistently.
+
+Let's clarify the definition I used, which is very common in finite element literature.
+
+The goal is to relate the derivatives in the global system (r, z) to the derivatives in the natural system (ξ, η). The chain rule gives us:
+
+$$\begin{Bmatrix} \frac{\partial f}{\partial \xi} \\ \frac{\partial f}{\partial \eta} \end{Bmatrix} = \begin{bmatrix} \frac{\partial r}{\partial \xi} & \frac{\partial z}{\partial \xi} \\ \frac{\partial r}{\partial \eta} & \frac{\partial z}{\partial \eta} \end{bmatrix} \begin{Bmatrix} \frac{\partial f}{\partial r} \\ \frac{\partial f}{\partial z} \end{Bmatrix}$$
+
+This can be written compactly as:
+
+$$\nabla_{\xi} f = \mathbf{J} \nabla_{r} f$$
+
+Here, the Jacobian matrix J is defined as:
+
+$$\mathbf{J} = \begin{bmatrix} \frac{\partial r}{\partial \xi} & \frac{\partial z}{\partial \xi} \\ \frac{\partial r}{\partial \eta} & \frac{\partial z}{\partial \eta} \end{bmatrix}$$
+
+This is the definition I provided previously. To compute the B matrix, we need the derivatives with respect to the global coordinates (r, z). Therefore, we must invert the relationship:
+
+$$\nabla_{r} f = \mathbf{J}^{-1} \nabla_{\xi} f$$
+
+The other convention defines the Jacobian as the transpose of the above:
+
+$$\mathbf{J}_{\text{alt}} = \begin{bmatrix} \frac{\partial r}{\partial \xi} & \frac{\partial r}{\partial \eta} \\ \frac{\partial z}{\partial \xi} & \frac{\partial z}{\partial \eta} \end{bmatrix}$$
+
+If this alternative definition is used, the chain rule relationship changes accordingly.
+
+The definition I have used is consistent with many standard FEM textbooks (e.g., Zienkiewicz & Taylor, Cook et al.). The key is that the matrix used to transform the derivatives must be inverted to get the global derivatives from the natural ones. My previous explanations are consistent with this formulation.
+
+
+**OK. I have some textbooks that have a adifferent order of the elements in the B matrix as they define the differential operator differently. Should not be a problem right?**
+
+You are absolutely right. It should not be a problem, and it's a very important point. The order of the rows in the `B` matrix depends directly on the definition of the strain vector `ε`.
+
+The key is **consistency**.
+
+In my previous explanations, I used the following definition for the strain vector, which is common in structural mechanics:
+
+$$
+{\epsilon} =
+\begin{Bmatrix}
+\epsilon_r \\
+\epsilon_z \\
+\gamma_{rz} \\
+\epsilon_\theta
+\end{Bmatrix}
+$$
+
+This definition leads to the `B_i` matrix block I showed you:
+
+$$
+\mathbf{B}_i =
+\begin{bmatrix}
+\frac{\partial N_i}{\partial r} & 0 \\
+0 & \frac{\partial N_i}{\partial z} \\
+\frac{\partial N_i}{\partial z} & \frac{\partial N_i}{\partial r} \\
+\frac{N_i}{r} & 0
+\end{bmatrix}
+$$
+
+However, some textbooks, particularly those coming from a continuum mechanics perspective, might define the strain vector differently, for example:
+
+$$
+{\epsilon}_{\text{alt}} =
+\begin{Bmatrix}
+\epsilon_r \\
+\epsilon_\theta \\
+\epsilon_z \\
+\gamma_{rz}
+\end{Bmatrix}
+$$
+
+If you use this alternative definition, the rows of your `B` matrix must be reordered to match:
+
+$$
+\mathbf{B}_{i, \text{alt}} =
+\begin{bmatrix}
+\frac{\partial N_i}{\partial r} & 0 \\
+\frac{N_i}{r} & 0 \\
+0 & \frac{\partial N_i}{\partial z} \\
+\frac{\partial N_i}{\partial z} & \frac{\partial N_i}{\partial r}
+\end{bmatrix}
+$$
+
+This is not a problem as long as your constitutive matrix `D` is also ordered to be consistent with your chosen strain vector definition. The calculation of the stiffness matrix `K = ∫ B^T D B * 2πr dV` will yield the same correct result, because the terms are just being multiplied in a different, but consistent, order.
+
+Your code seems to use a different `D` matrix than the standard one for plane stress, but as long as your `B` and `D` matrices are consistent with each other and your underlying theory, the result is valid.
+
+
+**I have the feeling my B is not consitent with my D.**
+
+That is a very common and critical issue to check. If your `B` and `D` matrices are inconsistent, the resulting stiffness matrix will be incorrect.
+
+Here is how you can verify the consistency between your `B` and `D` matrices. The key is that both must be based on the **exact same definition of the strain vector `ε`**.
+
+**Step 1: Write down your strain vector `ε`**
+
+First, explicitly define the order of strains you are using. For example, let's assume you chose this common order:
+
+$$
+{\epsilon} =
+\begin{Bmatrix}
+\epsilon_r \\  \epsilon_z \\ \gamma_{rz} \\ \epsilon_\theta
+\end{Bmatrix}
+=
+\begin{Bmatrix}
+\text{1st component} \\ \text{2nd component} \\ \text{3rd component} \\ \text{4th component}
+\end{Bmatrix}
+$$
+
+**Step 2: Check your `B` Matrix**
+
+The rows of your `B` matrix must be constructed to produce the components of your chosen `ε` vector in that specific order. For the example above, the rows of the `B_i` block must correspond to:
+
+$$
+\mathbf{B}_i =
+\begin{bmatrix}
+\frac{\partial N_i}{\partial r} & 0 \\   & \leftarrow \text{Row 1 computes } \epsilon_r \\
+0 & \frac{\partial N_i}{\partial z} \\   & \leftarrow \text{Row 2 computes } \epsilon_z \\
+\frac{\partial N_i}{\partial z} & \frac{\partial N_i}{\partial r} \\ & \leftarrow \text{Row 3 computes } \gamma_{rz} \\
+\frac{N_i}{r} & 0 \\ & \leftarrow \text{Row 4 computes } \epsilon_\theta
+\end{bmatrix}
+$$
+
+If your `B` matrix has the rows in a different order, your definition of `ε` must also have its components in that different order.
+
+**Step 3: Check your `D` (Constitutive) Matrix**
+
+The constitutive relationship is `σ = D ε`. The `D` matrix maps the strain vector `ε` to the stress vector `σ`. By convention, the stress vector `σ` is ordered identically to the strain vector `ε`.
+
+$$
+\begin{Bmatrix}
+\sigma_r \\ \sigma_z \\ \tau_{rz} \\ \sigma_\theta
+\end{Bmatrix}
+=
+\begin{bmatrix}
+D_{11} & D_{12} & D_{13} & D_{14} \\
+D_{21} & D_{22} & D_{23} & D_{24} \\
+D_{31} & D_{32} & D_{33} & D_{34} \\
+D_{41} & D_{42} & D_{43} & D_{44}
+\end{bmatrix}
+\begin{Bmatrix}
+\epsilon_r \\ \epsilon_z \\ \gamma_{rz} \\ \epsilon_\theta
+\end{Bmatrix}
+$$
+
+To verify your `D` matrix, check a single row. For example, the first row of the equation `σ = D ε` calculates `σ_r`:
+`σ_r = D_11 * ε_r + D_12 * ε_z + D_13 * γ_rz + D_14 * ε_θ`
+
+The coefficients `D_11`, `D_12`, etc., in your code must match the material law for `σ_r` based on the strain components in the order you defined in Step 1. If your `D` matrix was built for a different strain order (e.g., `ε = {ε_r, ε_θ, ε_z, γ_rz}`), then the columns would be swapped, and the `D` matrix would be incorrect for the `B` matrix shown above.
+
+By performing these three steps, you can ensure that the `ε` you use to build `B` is the same `ε` that your `D` matrix expects.
