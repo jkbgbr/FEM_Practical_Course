@@ -284,3 +284,73 @@ To verify your `D` matrix, check a single row. For example, the first row of the
 The coefficients `D_11`, `D_12`, etc., in your code must match the material law for `σ_r` based on the strain components in the order you defined in Step 1. If your `D` matrix was built for a different strain order (e.g., `ε = {ε_r, ε_θ, ε_z, γ_rz}`), then the columns would be swapped, and the `D` matrix would be incorrect for the `B` matrix shown above.
 
 By performing these three steps, you can ensure that the `ε` you use to build `B` is the same `ε` that your `D` matrix expects.
+
+
+
+
+# Sie haben absolut recht, und ich entschuldige mich. 
+Meine vorherige Analyse war falsch. Sie haben den Kern des Problems korrekt identifiziert, indem Sie die Rolle der Jacobi-Determinante in Frage gestellt haben.
+
+Lassen Sie uns dies von Grund auf neu aufbauen.
+
+1.  **Die Integrationsformel:** Die Steifigkeitsmatrix wird durch ein Integral über die *Fläche des Elternelements* berechnet, nicht über die physische Fläche. Die Transformation vom physischen zum natürlichen Koordinatensystem führt die Jacobi-Determinante ein:
+    $$ K = \int_{\text{Eltern}} (B^T D B \cdot 2 \pi r) \cdot |J| \, d\xi d\eta $$
+    Hier ist `B` die isoparametrische B-Matrix, die *keinen* `1/two_A`-Term enthält.
+
+2.  **Die Jacobi-Determinante `|J|`:** Für ein lineares Dreieckselement ist die Jacobi-Determinante `|J|` konstant und entspricht der **doppelten Fläche des physischen Elements (`two_A`)**. Das ist ein Standardergebnis in der FEM. Ihre Annahme ist also korrekt.
+
+3.  **Numerische Integration (Gauß-Quadratur):** Wenn wir das Integral numerisch lösen, wird es zu einer Summe. Die Standard-Gauß-Quadraturformel für ein Dreieck lautet:
+    $$ \int_{\text{Eltern}} f(\xi, \eta) \, d\xi d\eta = (\text{Fläche des Elternelements}) \cdot \sum_{i} w_i f(\xi_i, \eta_i) $$
+    Das Standard-Elternelement (Knoten bei (0,0), (1,0), (0,1)) hat eine Fläche von **0.5**.
+
+4.  **Zusammensetzen der Formel:** Wir setzen nun alles in die Formel für `K` ein:
+    $$ K = (\text{Fläche des Elternelements}) \cdot \sum_{gp} (B^T D B \cdot 2 \pi r)_{gp} \cdot |J| \cdot w_{gp} $$
+    $$ K = (0.5) \cdot \sum_{gp} (B^T D B \cdot 2 \pi r)_{gp} \cdot (\text{two\_A}) \cdot w_{gp} $$
+
+**Das ist der entscheidende Punkt.** Die Formel enthält sowohl den Faktor `0.5` (aus der Quadraturregel) als auch den Faktor `two_A` (die Jacobi-Determinante). Da `two_A` die doppelte Fläche ist, heben sich die Faktoren `0.5` und `two_A` gegenseitig auf, und es bleibt die einfache Fläche `A` übrig.
+$$ K = A \cdot \sum_{gp} (B^T D B \cdot 2 \pi r)_{gp} \cdot w_{gp} $$
+
+**Analyse Ihres Codes:**
+
+Ihre vorherige, funktionierende Implementierung lautete:
+```python
+K += B_evaluated.T * D * B_evaluated * 2 * sp.pi * r_physical_at_gp * det_J * w
+```
+Hier ist `det_J` gleich `two_A`. Ihr Code berechnet also:
+$$ K = \sum (B^T D B \cdot 2 \pi r)_{gp} \cdot (\text{two\_A}) \cdot w_{gp} $$
+Wenn man dies mit der korrekten Formel vergleicht, fehlt in Ihrem Code der Faktor **0.5** von der Fläche des Elternelements. Das erklärt exakt, warum Ihre Ergebnisse **doppelt so groß** sind wie erwartet.
+
+**Lösung:**
+
+Sie müssen den Faktor `0.5` in Ihre Berechnung einbeziehen.
+
+```python
+def K_matrix_1(ng=1):
+    """ Gauss integration, 1 or 3 integration points. This is method 1 from the book."""
+    B_sym = B_symbolic()
+    D = D_matrix()
+    B_element = B_sym.subs(physical_coords_map)
+
+    N_map = sp.Matrix([1 - R - Z, R, Z])
+    r_map = N_map.dot(sp.Matrix([r1, r2, r3])).subs(physical_coords_map)
+    z_map = N_map.dot(sp.Matrix([z1, z2, z3])).subs(physical_coords_map)
+
+    # Jacobi-Determinante ist die doppelte physische Fläche
+    det_J = two_A.subs(physical_coords_map)
+
+    K = sp.zeros(ND * NNODE, ND * NNODE)
+
+    # Die Fläche des Elternelements ist 0.5
+    parent_area = 0.5
+
+    for p, w in zip(gi_data[ng]['point'], gi_data[ng]['weight']):
+        R_gp, Z_gp = p[0], p[1]
+        r_physical_at_gp = r_map.subs({R: R_gp, Z: Z_gp})
+        z_physical_at_gp = z_map.subs({R: R_gp, Z: Z_gp})
+        B_evaluated = B_element.subs({'R': r_physical_at_gp, 'Z': z_physical_at_gp})
+
+        # Korrekte Formel: A_parent * (...) * |J| * w
+        K += parent_area * (B_evaluated.T * D * B_evaluated * 2 * sp.pi * r_physical_at_gp) * det_J * w
+
+    return K
+```
