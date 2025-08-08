@@ -1424,3 +1424,41 @@ Your privacy & Gemini Apps Opens in a new window
 Gemini may display inaccurate info, including about people, so double-check its responses.
 
 
+Die **BB-Matrix** ist der zweite fundamentale Teil der Strain-Displacement-Matrix für axialsymmetrische Elemente. Sie beschreibt, wie die harmonischen Komponenten ($n > 0$) zur Kopplung zwischen den verschiedenen Verschiebungsrichtungen beitragen.
+
+## Definition der BB-Matrix
+
+Die BB-Matrix hat die Form:
+
+$$[B_B] = \begin{bmatrix}
+0 & 0 & 0 & \cdots & 0 & 0 & 0 \\
+0 & \frac{N_i}{r} & 0 & \cdots & 0 & \frac{N_j}{r} & 0 \\
+0 & 0 & 0 & \cdots & 0 & 0 & 0 \\
+-\frac{N_i}{r} & 0 & 0 & \cdots & -\frac{N_j}{r} & 0 & 0 \\
+0 & 0 & -\frac{N_i}{r} & \cdots & 0 & 0 & -\frac{N_j}{r} \\
+0 & 0 & 0 & \cdots & 0 & 0 & 0
+\end{bmatrix}$$
+
+## Physikalische Bedeutung
+
+Die BB-Matrix sorgt für die **harmonische Kopplung** zwischen den Verschiebungskomponenten:
+
+1. **Zeile 2 (Umfangsdehnung $\varepsilon_\theta$)**: 
+   - Zeigt, wie die Umfangsverschiebung $u_\theta$ zur Umfangsdehnung beiträgt
+   - Term: $\frac{n u_{\theta n}}{r}$ aus der erweiterten Formel
+
+2. **Zeile 4 (Schub $\gamma_{r\theta}$)**:
+   - Koppelt radiale Verschiebung mit Umfangsschub
+   - Term: $-\frac{n u_{rn}}{r}$ 
+
+3. **Zeile 5 (Schub $\gamma_{\theta z}$)**:
+   - Koppelt axiale Verschiebung mit Umfangsschub  
+   - Term: $-\frac{n u_{zn}}{r}$
+
+## Verwendung
+
+Die vollständige B-Matrix für Harmonische $n$ ist:
+
+$$[B_n] = [B_A] + n \cdot [B_B]$$
+
+Für $n = 0$ (axialsymmetrisch) verschwindet der BB-Anteil, und nur die klassische BA-Matrix bleibt übrig.
