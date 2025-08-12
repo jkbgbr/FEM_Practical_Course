@@ -1462,3 +1462,241 @@ Die vollständige B-Matrix für Harmonische $n$ ist:
 $$[B_n] = [B_A] + n \cdot [B_B]$$
 
 Für $n = 0$ (axialsymmetrisch) verschwindet der BB-Anteil, und nur die klassische BA-Matrix bleibt übrig.
+
+###
+
+That's a great question, and it touches on a common point of confusion. For the load vector, you actually **don't use the B-matrices at all**.
+
+Your proposed `B_cos(l) + B_sin(l)` is a clever thought, but the roles of the matrices are different:
+
+* **B-Matrix**: Relates **strain** to nodal displacements. It's used to calculate the element's internal forces and stiffness (`[k]`).
+* **N-Matrix**: Relates the **displacement** at any point to the nodal displacements. It's used to translate external forces (like body forces or pressure) into equivalent forces at the nodes. This is what we need for the load vector `f`.
+
+***
+
+# Approach: cos and sin parts are dealt with separately.
+
+
+### The Correct Approach: The Shape Function Matrix `[N]`
+
+To create the load vector, you use the original **shape function matrix `[N]`**. Just like with the B-matrix, we can apply the efficient "two-part" solution to it.
+
+The displacement at any point is given by:
+`{u, v, w} = [N(r, z, θ)] * {d'}`
+
+We can split the `[N]` matrix exactly like we did before:
+
+$$[\mathbf{N}](r, z, \theta) = [\mathbf{N}_{cos}](r, z) \cdot \cos(l\theta) + [\mathbf{N}_{sin}](r, z) \cdot \sin(l\theta)$$
+
+The components are very simple:
+
+* **`[N_cos]`**: This matrix contains the shape functions `N_i` in the columns corresponding to the `u'` and `w'` degrees of freedom.
+* **`[N_sin]`**: This matrix contains the shape functions `N_i` in the columns corresponding to the `v'` degree of freedom.
+
+***
+
+### The Load Vector Formula
+
+The formula for the load vector from body forces `{b}` is:
+
+$$\{\mathbf{f}\} = \int_V [\mathbf{N}]^T \{\mathbf{b}\} \, dV$$
+
+The body forces `{b_r, b_θ, b_z}` also have to be expressed as a Fourier series for the specific harmonic `l` you are solving for.
+
+When you substitute the two-part `[N]` matrix and the Fourier series for the forces into the integral, you once again get terms with `cos²(lθ)`, `sin²(lθ)`, etc. You then follow the same efficient process:
+
+1.  **Integrate over `θ` analytically** from `0` to `2π`. The `cos/sin` terms will simplify to factors of `π` or `2π`, and the `θ` dependency will be eliminated.
+2.  **Integrate the result over the `r-z` plane** using numerical Gauss Quadrature.
+
+So, while you don't use `B_cos` or `B_sin`, you use the exact same **method** on the much simpler `N_cos` and `N_sin` matrices. 💡
+
+
+You are absolutely right to ask about pressure—it's the most common type of surface load. The principle is exactly the same as for body forces, and it still uses the **N-matrix**, not the B-matrix.
+
+The formula is very similar, but instead of integrating over a volume `V`, you integrate over a surface area `S`:
+
+$$\{\mathbf{f}\} = \int_S [\mathbf{N}]^T \{\mathbf{t}\} \, dS$$
+
+Here’s how the "two-part" method makes this efficient.
+
+***
+
+### The Components for a Pressure Load
+
+1.  **`[N]` Matrix**: This is the same shape function matrix as before, which we split into `[N_cos]` and `[N_sin]`.
+
+2.  **`{t}` (Traction Vector)**: This is the force per unit area. For a pressure `p`, this vector is simply the pressure multiplied by the direction it's pushing in (the normal vector `{n}` to the surface).
+    `{t} = p(θ) * {n_r, n_θ, n_z}`
+
+3.  **`p(θ)` (Pressure)**: This is the key part. To solve for a specific harmonic `l`, you must also represent the pressure as a Fourier series and pick out the corresponding component. For example, if your pressure varies like a simple side load, you might represent it as:
+    `p(θ) = p_1 * cos(1θ)`
+    Here, `p_1` is the magnitude of your harmonic pressure load. For uniform pressure, only the `l=0` term is non-zero.
+
+4.  **`dS` (Surface Area)**: For an axisymmetric body, the surface area element is `dS = r dθ ds`, where `ds` is the arc length along the boundary in the `r-z` plane.
+
+***
+
+### The Efficient Workflow
+
+Putting it all together, the integral looks complicated:
+
+$$\{\mathbf{f}\} = \int_s \int_0^{2\pi} \big( [\mathbf{N}_{cos}]\cos(l\theta) + [\mathbf{N}_{sin}]\sin(l\theta) \big)^T \big( p_l \cos(l\theta) \{\mathbf{n}\} \big) \, r \, d\theta \, ds$$
+
+However, it simplifies beautifully using the exact same logic as the stiffness matrix:
+
+1.  **Analytical `θ` Integration (The "magic" step)**
+    You multiply the terms. The `cos(lθ)` from the pressure will multiply with the `cos(lθ)` and `sin(lθ)` from the `[N]` matrix. This gives you integrals of `cos²(lθ)` and `cos(lθ)sin(lθ)`.
+    * The `cos²` term integrates to `π`.
+    * The `cos*sin` term integrates to **zero** and vanishes.
+    This step completely eliminates `θ` from the problem, leaving a much simpler expression.
+
+2.  **Numerical `ds` Integration (The final step)**
+    You are now left with a simple line integral along the boundary `s` in the `r-z` plane. You solve this using 1D Gauss Quadrature, evaluating your simplified expression at a few points along the element edge.
+
+In short, your assumption was perfect. You don't use the B-matrices. You apply the **exact same two-part `N_cos` and `N_sin` methodology** to the surface integral, which makes the calculation incredibly efficient.
+
+Of course. My apologies for jumping to the code. Here is the mathematical breakdown of the `[N_cos]` and `[N_sin]` matrices.
+
+***
+
+### The Full Shape Function Matrix `[N]`
+
+First, let's recall the fundamental relationship. The displacement `{u, v, w}` at any point is linked to the vector of all nodal displacement amplitudes `{d'}` by the full shape function matrix `[N]`:
+
+$$\begin{Bmatrix} u \\ v \\ w \end{Bmatrix} = [\mathbf{N}] \{\mathbf{d'}\}$$
+
+The full `[N]` matrix is built by combining blocks for each node. For a single node `i`, its `3x3` block `[N_i]` is:
+
+$$
+[\mathbf{N}_i] =
+\begin{bmatrix}
+N_i \cos(l\theta) & 0 & 0 \\
+0 & N_i \sin(l\theta) & 0 \\
+0 & 0 & N_i \cos(l\theta)
+\end{bmatrix}
+$$
+
+The full `[N]` matrix is then assembled by putting these blocks side-by-side: `[N] = [ [N_1] \ [N_2] \ \dots \ [N_{\text{NNODE}}] ]`.
+
+***
+
+### The Decomposed Parts: `[N_cos]` and `[N_sin]`
+
+We separate `[N]` using the relation: `[N] = [N_cos]cos(lθ) + [N_sin]sin(lθ)`. By looking at the `[N_i]` block above, we can easily see which terms belong to which part.
+
+## `[N_cos]` Matrix
+
+This matrix contains all the terms that are multiplied by `cos(lθ)`. For a single node `i`, its `3x3` block is:
+
+$$
+[\mathbf{N}_{\cos, i}] =
+\begin{bmatrix}
+N_i & 0 & 0 \\
+0 & 0 & 0 \\
+0 & 0 & N_i
+\end{bmatrix}
+$$
+
+**Physical Meaning**: This matrix links the **radial (`u'`)** and **axial (`w'`)** nodal displacement amplitudes to the final `u` and `w` components of the displacement field.
+
+## `[N_sin]` Matrix
+
+This matrix contains all the terms that are multiplied by `sin(lθ)`. For a single node `i`, its `3x3` block is:
+
+$$
+[\mathbf{N}_{\sin, i}] =
+\begin{bmatrix}
+0 & 0 & 0 \\
+0 & N_i & 0 \\
+0 & 0 & 0
+\end{bmatrix}
+$$
+
+**Physical Meaning**: This matrix links the **tangential (`v'`)** nodal displacement amplitude to the final `v` component of the displacement field. It handles the "twisting" and out-of-plane motions.
+
+
+Of course. For completeness, here are the functions to create the **`[N_cos]`** and **`[N_sin]`** matrices.
+
+You'll notice these are much simpler than their B-matrix counterparts because they only involve the shape functions `N_i` themselves, not their derivatives.
+
+-----
+
+### 1\. `N_cos` Matrix Function
+
+This function creates the part of the shape function matrix `[N]` that gets multiplied by `cos(lθ)`. It populates the columns corresponding to the `u'` and `w'` degrees of freedom.
+
+```python
+import sympy as sp
+
+# ==============================================================================
+# ASSUMPTIONS (same as before)
+# NNODE, ND, R, Z, physical_coords_map, etc. are all defined and available.
+#
+# def shape_functions() -> sp.Matrix:
+#     """Returns a symbolic matrix of shape functions N(R, Z)."""
+#     ...
+# ==============================================================================
+
+
+def calculate_N_cos_symbolic() -> sp.Matrix:
+    """
+    Symbolically calculates the N_cos matrix, the part of the shape function
+    matrix [N] that is multiplied by cos(l*theta).
+
+    Returns:
+        sp.Matrix: The symbolic 3x(3*NNODE) N_cos matrix.
+    """
+    ND = 3
+    N_cos = sp.zeros(ND, NNODE * ND)
+
+    # Get the symbolic expressions for the shape functions 'N'
+    N_funcs = shape_functions().subs(physical_coords_map)
+
+    # Loop through each node to build the matrix
+    for i in range(NNODE):
+        # Define column indices for this node's DOFs: u'_i, v'_i, w'_i
+        col_u, col_v, col_w = ND * i, ND * i + 1, ND * i + 2
+
+        # N_cos relates the u' and w' DOFs to the u and w displacements.
+        # Row 0 -> u displacement
+        N_cos[0, col_u] = N_funcs[i]
+        # Row 2 -> w displacement
+        N_cos[2, col_w] = N_funcs[i]
+
+    return N_cos
+```
+
+-----
+
+### 2\. `N_sin` Matrix Function
+
+This function creates the part of the shape function matrix `[N]` that gets multiplied by `sin(lθ)`. It populates the columns corresponding to the `v'` (tangential) degrees of freedom.
+
+```python
+import sympy as sp
+
+def calculate_N_sin_symbolic() -> sp.Matrix:
+    """
+    Symbolically calculates the N_sin matrix, the part of the shape function
+    matrix [N] that is multiplied by sin(l*theta).
+
+    Returns:
+        sp.Matrix: The symbolic 3x(3*NNODE) N_sin matrix.
+    """
+    ND = 3
+    N_sin = sp.zeros(ND, NNODE * ND)
+
+    # Get the symbolic expressions for the shape functions 'N'
+    N_funcs = shape_functions().subs(physical_coords_map)
+
+    # Loop through each node to build the matrix
+    for i in range(NNODE):
+        # Define column indices for this node's DOFs: u'_i, v'_i, w'_i
+        col_u, col_v, col_w = ND * i, ND * i + 1, ND * i + 2
+
+        # N_sin relates the v' DOF to the v displacement.
+        # Row 1 -> v displacement
+        N_sin[1, col_v] = N_funcs[i]
+
+    return N_sin
+```
