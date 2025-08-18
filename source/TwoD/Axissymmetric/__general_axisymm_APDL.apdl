@@ -1,0 +1,10 @@
+
+
+
+
+et,1,272                        ! element type “1” is SOLID272 4-node gen. axisymmetric
+keyopt,1,2,nplane               ! enough fourier nodes in the circumferential direction
+TYPE,1                          ! global attribute for element type for meshing
+sectype,1,axis                  ! section type 1 to be axis of general axisymmetric section
+secdata,2,0,2                   ! locate axisymmetric axis, “Pattern 2”, CSYS=0, 2=Y axis
+SECNUM,1                        ! global attribute for elements to be created
